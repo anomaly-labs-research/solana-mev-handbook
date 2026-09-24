@@ -8,10 +8,10 @@ pipeline, with a neutral dark theme and a single indigo accent.
 ## Develop
 
 ```bash
-npm install
-npm run dev        # http://localhost:3000
-npm run build      # static generation of every doc
-npm run lint
+bun install
+bun run dev        # http://localhost:3000
+bun run build      # static generation of every doc
+bun run lint
 ```
 
 ## Content

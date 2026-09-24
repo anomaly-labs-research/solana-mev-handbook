@@ -4,7 +4,7 @@ import { Logo } from "./Logo";
 export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-bg/80 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-[90rem] items-center justify-between gap-6 px-4 sm:px-6">
+      <div className="mx-auto flex h-14 max-w-360 items-center justify-between gap-6 px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2.5 text-sm font-semibold tracking-tight">
           <Logo />
           <span>
