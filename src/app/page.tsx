@@ -15,12 +15,12 @@ export default function Home() {
             Solana · as of September 2026
           </p>
           <h1 className="max-w-3xl text-5xl font-semibold leading-[1.05] tracking-tight sm:text-7xl">
-            MEV Handbook.
+            Solana MEV Handbook.
             <span className="block text-fg-faint">Strategy by strategy.</span>
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-fg-muted">
             What each on-chain trading strategy is, how the math works, what it looks like on
-            Solana, and where the edge has moved. Researched from primary sources, with every
+            <span className="rounded bg-accent/15 px-1 text-accent">Solana, and where the edge has moved.</span> Researched from primary sources, with every
             unconfirmed claim marked.
           </p>
           <div className="mt-10 flex flex-wrap gap-3">
@@ -61,21 +61,23 @@ export default function Home() {
         </div>
       </section>
 
-      {SECTIONS.filter((s) => s.id !== "overview").map((section) => (
-        <section key={section.id} className="mx-auto max-w-6xl px-6 pb-16">
-          <div className="mb-6 flex items-end justify-between gap-6">
-            <div>
-              <h2 className="text-2xl font-semibold tracking-tight">{section.title}</h2>
-              <p className="mt-1 text-sm text-fg-muted">{section.tagline}</p>
+      {
+        SECTIONS.filter((s) => s.id !== "overview").map((section) => (
+          <section key={section.id} className="mx-auto max-w-6xl px-6 pb-16">
+            <div className="mb-6 flex items-end justify-between gap-6">
+              <div>
+                <h2 className="text-2xl font-semibold tracking-tight">{section.title}</h2>
+                <p className="mt-1 text-sm text-fg-muted">{section.tagline}</p>
+              </div>
             </div>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {docsInSection(section.id).map((d) => (
-              <DocCard key={d.slug} doc={d} />
-            ))}
-          </div>
-        </section>
-      ))}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {docsInSection(section.id).map((d) => (
+                <DocCard key={d.slug} doc={d} />
+              ))}
+            </div>
+          </section>
+        ))
+      }
 
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-8 text-xs text-fg-faint">
@@ -83,6 +85,6 @@ export default function Home() {
           <span>Figures dated September 2026. Claims marked (unverified) lack a primary source.</span>
         </div>
       </footer>
-    </main>
+    </main >
   );
 }

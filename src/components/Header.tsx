@@ -8,7 +8,7 @@ export function Header() {
         <Link href="/" className="flex items-center gap-2.5 text-sm font-semibold tracking-tight">
           <Logo />
           <span>
-            MEV<span className="text-fg-muted"> Handbook</span>
+            MEV<span className="text-fg-muted">.sh</span>
           </span>
         </Link>
         <nav className="flex items-center gap-1 text-sm">
