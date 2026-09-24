@@ -33,3 +33,14 @@ scripts/sync-content.sh /path/to/planckwave
 
 Every route is statically generated, so any Next.js host works. On Vercel: import the repo,
 framework preset Next.js, no environment variables needed.
+
+On Cloudflare Workers the app runs through `@opennextjs/cloudflare` (`open-next.config.ts`,
+`wrangler.jsonc`). The doc pages are SSG output of a dynamic route, and OpenNext only serves
+those from its incremental cache, so the config uses the Workers Static Assets cache; without
+it every `/docs/*` route 404s. Build with `bunx opennextjs-cloudflare build` and deploy with
+`bunx opennextjs-cloudflare deploy` (the deploy step populates the cache). Locally:
+
+```bash
+bun run preview     # OpenNext build + wrangler dev
+bun run deploy
+```
