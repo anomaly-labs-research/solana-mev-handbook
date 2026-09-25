@@ -4,7 +4,35 @@ _As of Sep 2026._
 
 A landscape and market-structure document. It covers what MEV is on Solana, how much of it there is, who extracts and who captures it, and where the market is heading. It does not explain strategies: arbitrage economics live in [mev-strategies/arbitrage.md](mev-strategies/arbitrage.md), and ordering mechanics for each block-building stack live in [solana-block-building.md](solana-block-building.md). Claims marked (unverified) could not be confirmed against a primary source.
 
+<!-- only: beginner -->
+
+## In plain terms
+
+**What it is.** Every few hundred milliseconds one Solana computer, the **leader**, decides which transactions go into the next block and in what order. That choice is worth money: being placed right before or right after a trade that moves a price lets you profit from the move. The value captured this way is called **MEV**, short for maximal extractable value.
+
+**The main kinds on Solana.**
+
+- **Arbitrage**: a big swap moves a token's price on one exchange, so a bot buys it there and sells it on another exchange that has not caught up. Solana saw about 90 million of these in 2024, averaging around $1.58 each.
+- **Liquidations**: a borrower falls below their collateral limit and a bot closes the loan for a fee.
+- **Sandwiching**: a bot sees a user's swap before it lands, buys ahead of it to push the price up, lets the user fill at the worse price, then sells into it. Sandwiching took between $370 million and $500 million from Solana users in the sixteen months to May 2025, and live trackers still counted thousands of SOL a day in September 2026.
+
+**A tiny example.** A user buys $100 of a small token. A sandwich bot spots the order early, buys first so the price ticks up, lets the user buy at that higher price, then sells its own tokens into the user's purchase. The user gets a few cents to a few dollars less of the token than they should have; the bot pockets that gap minus what it paid to get placed. Tens of thousands of victims a day add up.
+
+**Who actually takes it.** To be placed well you pay either a **priority fee** (a fee inside the transaction that goes to the leader) or a **tip** attached to a **bundle**, a small package of transactions that lands together or not at all. Arbitrage bots hand over half or more of their profit in tips because so many of them compete, so most of the money ends up with **validators**, the computers that produce blocks, and the people who stake SOL behind them. Even for them it is a small slice: about nine tenths of a staker's income is the network's own inflation, and tips have shrunk from their early-2025 peak to under $10 million a quarter. Among bots, a few well-funded teams win most races; one program did about half of all sandwiches in late 2024.
+
+**Why sandwiching is the contested one.** Arbitrage and liquidations react to something that already happened and leave prices fairer than they found them. Sandwiching needs to see a user's trade before it lands and takes money straight from that user. Solana has no public waiting room for pending transactions (no **mempool**), so seeing a trade early means running the leader yourself, running altered software, or buying a private feed. Jito, which runs the biggest tip system, shut its preview feed in March 2024 over sandwiching, and the Solana Foundation removed more than thirty validators from its stake-support program for it. The newer block builders, **BAM** from Jito and **Harmonic**, refuse to build sandwiches on the roughly half of all blocks they now handle. It has not disappeared, but it is smaller and hits small trades.
+
+**What can go wrong.** For users, a bad fill from a sandwich, though wallets now route most trades through protected lanes. For bots, most attempts fail and still cost a fee, the fast data feeds are now paid, and margins have fallen for five straight quarters. For the network, bots firing many attempts at once clog blocks, because failing is nearly free.
+
+**Terms you will meet on this page.** A **DEX** is an exchange run by a program instead of a company. An **LP** (liquidity provider) deposits tokens into a DEX pool and earns fees; LPs are who arbitrage bots trade against, and their quiet loss to stale prices is called **LVR**. A **slot** is one block interval, about 250 milliseconds. **Jito** is the company whose software most validators run to sell block placement; **BAM** and **Harmonic** are competing ways of building blocks. **Stake** is the SOL locked behind a validator. A **prop AMM** is a private, oracle-priced pool run by one market maker; these now handle most trading in the big tokens.
+
+**Bottom line.** MEV on Solana is a race to see the next block first and pay the right builder the right price. The benign kinds are a low-margin infrastructure business run by a few teams; sandwiching survives at the fringe. The money mostly flows to validators and stakers, and it shrinks every quarter.
+
+<!-- /only -->
+
 ## TL;DR
+
+<!-- level: intermediate -->
 
 - Solana MEV is a **latency and state-visibility game**, not a mempool game. There is no public mempool, blocks stream continuously, and the leader is known in advance.
 - Value flows to validators and stakers through two channels: **Jito tips** (an out-of-protocol bundle auction) and **priority fees** (in-protocol, 100% to the leader since SIMD-0096).
@@ -20,7 +48,7 @@ A landscape and market-structure document. It covers what MEV is on Solana, how 
 | Property | Ethereum | Solana |
 |---|---|---|
 | Pending-tx visibility | Public mempool | None; txs go straight to the leader (Jito's 200ms preview mempool shut March 2024) |
-| Block cadence | 12s discrete blocks | Continuous streaming, ~300ms slots since 25 Aug 2026 (400ms before 19 Aug) |
+| Block cadence | 12s discrete blocks | Continuous streaming, ~250ms slots since 18 Sep 2026 (400ms before 19 Aug, 350ms and 300ms in between) |
 | Who orders | Builder chosen by auction (PBS) | The scheduled leader, or a builder the leader has bound itself to (Jito/BAM/Harmonic) |
 | Bid mechanism | Builder payment to proposer | Priority fee per compute unit (in-protocol) or Jito tip transfer (out-of-protocol) |
 | Failed-tx cost | Full gas | Base fee only; spam is cheap and common |
@@ -28,9 +56,15 @@ A landscape and market-structure document. It covers what MEV is on Solana, how 
 
 Three consequences follow. First, **front-running requires privileged flow**: without a mempool, you can only sandwich if you see a transaction before the leader commits it, which means running the leader, sitting between users and leaders, or buying a private feed. Second, the dominant benign strategies are **backruns of observed state changes**: arbitrage after a swap lands, liquidation after an oracle update. The race is to see shreds or preconfirmations first and land next. Third, because failing is cheap, **spam substitutes for latency**. Umbra Research documented in 2023 that around 96% of atomic-arb attempts failed on-chain, and failed transactions peaked at 75.7% of all non-vote transactions in April 2024 before the Agave 1.18 scheduler tightened things.
 
+<!-- level: intermediate -->
+
 How value reaches validators: a priority fee is paid to the leader who includes the transaction (SIMD-0096, live February 2025, ended the 50% burn). A Jito tip is a SOL transfer to one of eight tip accounts inside a bundle; the leader sweeps it to a tip-distribution account and stakers claim their share at epoch end via a merkle root, net of validator commission and a Jito protocol cut. Harmonic has no tip account; its "tip" is the priority fee and goes 100% to the validator. Details of each path are in `solana-block-building.md`.
 
+<!-- /level -->
+
 ## 2. The extraction landscape in numbers
+
+<!-- level: intermediate -->
 
 ### Aggregate flows
 
@@ -70,18 +104,24 @@ Two figures circulate widely without a traceable primary source and should be tr
 
 ### Where the measurements come from
 
+<!-- level: expert -->
+
 - **Helius, "Solana MEV Report"** (Jan 2025): the most complete public survey; 2024 tip totals, arb census, DeezNode case study, protection products.
 - **Ghost / sandwiched.me** (live dashboard since June 2024; "State of Solana MEV", May 2025; "Detecting Evasive Sandwich Attacks", Sep 2025): the standard sandwich tracker, including per-validator and per-stake-pool sandwich rates.
 - **Blockworks Research** quarterly Jito and Solana token-holder reports: tips, protocol revenue, REV, client stake shares.
 - **Umbra Research, "MEV on Solana"** (May 2023): first documentation of spam-as-competition and of the risk of validator self-extraction.
 - **ACM IMC 2025**, Gerzon et al., "Quantifying the Threat of Sandwiching MEV on Jito": four months of 2025 data, 500K+ attacks.
-- **arXiv 2604.00234**, Wang et al., "Blockspace Under Pressure" (Jul 2026): equilibrium model of spam MEV; credits Solana as the origin of the phenomenon, empirical work is on Base and Arbitrum.
+- **arXiv 2604.00234**, Wang et al., "Blockspace Under Pressure" (Mar 2026, revised Jul 2026): equilibrium model of spam MEV; credits Solana as the origin of the phenomenon, empirical work is on Base and Arbitrum.
 - **arXiv 2504.18055**, Zheng et al., "Why Does My Transaction Fail?" (Apr 2025): 1.5B failed Solana transactions across 72M blocks, attributed to bots.
 - **Syndica** monthly on-chain deep dives: per-client revenue per block.
 
 Sources disagree on definitions. Ghost's sandwich counts include "wide" sandwiches (legs 50–300ms apart, not adjacent in a bundle) and grew roughly 30x as a share after anti-sandwich measures; Helius's DeezNode figure counts only that program. A live tracker showing 6,000–9,000 SOL/day in September 2026 is consistent with the ~$500M/16-month peak-era figure only if you accept that most of what remains is small: median victim loss is a few dollars.
 
 ## 3. Sandwiching: how it survived, and where it stands
+
+<!-- the timeline table is hidden in beginner mode; the prose below stays -->
+
+<!-- level: intermediate -->
 
 **Timeline**
 
@@ -92,17 +132,25 @@ Sources disagree on definitions. Ghost's sandwich counts include "wide" sandwich
 | 7 May 2024 | Solana Foundation posts SFDP rule: participating in a private mempool that enables sandwiching is grounds for removal. |
 | 9–10 Jun 2024 | Foundation removes a group of operators (press reports "more than 30") from the delegation program. Tim Garcia: "Decisions in this matter are final. Enforcement actions are ongoing." |
 | Nov–Dec 2024 | DeezNode validator's stake grows from 307,900 to 802,500 SOL, ~20% from Marinade mSOL; its Vpe bot does ~half of all sandwiches. |
-| Early 2025 | Jito StakeNet governance blacklists high-sandwich validators (epoch 789); Marinade becomes the dominant staker to the remaining offenders. Ghost measures median validator sandwich rate 2.4%, outliers 20–60%. |
+| Mar–May 2025 | Jito StakeNet governance authorises a new sandwich blacklist (JIP-15, Mar 2025), visible in delegations by epoch 789; Marinade becomes the dominant staker to the remaining offenders. Ghost measures median validator sandwich rate 2.4%, outliers 20–60%. |
 | 2025 | Helius's own validator: 0.72% of 412,325 blocks contain a sandwich over 60 days; worst validators 27%. Blind (no-mempool) sandwiching rises from 1% to 30% of attacks. |
 | Jul 2025 – 2026 | BAM (TEE ordering) and Harmonic (Nov 2025) both launch with explicit no-sandwich rules; combined they reach ~54% of stake by Q2 2026. |
 | Apr 2026 | A claim circulates that a fix on 8 April 2026 ended "simple" sandwiching, with remaining attacks targeting sub-$1 trades (unverified; contradicted by live trackers below). |
 | Sep 2026 | sandwiched.me shows 6,783 SOL extracted in 24 hours from 66,735 victims by 518 addresses. |
 
+<!-- /level -->
+
 **How it survived the mempool shutdown.** Sandwiching on Solana needs sight of a user transaction before the leader commits it. After March 2024 that came from three places: RPC providers or wallets forwarding flow to a private feed; validators running a modified client that leaks or reorders their own incoming transactions; and the leader itself acting as the searcher. The DeezNode case combined the last two: a large validator, mostly funded by liquid-staking delegations, ran the bot against transactions it received as leader. Because stake pools delegate algorithmically, the offenders kept receiving stake until pool governance blacklisted them, which is why Ghost's analysis pivoted from "which bot" to "which stake pool funds it".
+
+<!-- level: intermediate -->
 
 **Did BAM and Harmonic end it?** No, but they changed its shape. Both stacks refuse to build sandwiches on the ~54% of stake they cover, and TEE-based ordering in BAM removes the leader's own ability to peek. What remains is concentrated on the ~45% of slots led by plain Agave or unaligned Jito-Agave validators, and in the "blind" or "wide" variants that do not need adjacency: a bot statistically guesses that a Pump.fun-style buy is coming and brackets it across two transactions 50–300ms apart. That is lower-margin and hits small trades, which matches the live tracker's profile of many victims and low per-victim loss. There is no measurement yet of sandwich rate by client (Ghost has a "clients" view but no 2026 report), so the "BAM/Harmonic ended it" claim is plausible for their own slots and unproven for the network.
 
+<!-- /level -->
+
 **Delegation-program enforcement.** The Solana Foundation's stake has fallen from 13% of the network (Aug 2024) to 5% (Mar 2026) under a three-out-one-in policy, so SFDP removal is a weaker lever than it was. Jito's StakeNet blacklist and Marinade's stake-auction rules now matter more than Foundation stake.
+
+<!-- level: intermediate -->
 
 **Protection products for users** (what each actually does):
 
@@ -123,6 +171,8 @@ The common thread: every product works by keeping flow away from the open orderi
 
 ## 4. Infrastructure and market structure
 
+<!-- level: intermediate -->
+
 ### Block builders
 
 | Stack | Stake (Q2 2026) | Ordering | Searcher access | Economics |
@@ -139,21 +189,23 @@ Harmonic launched 5 Nov 2025 with a $6M Paradigm-led seed; co-founder Jakob Povs
 
 ### Data and preconfirmations
 
-- **Jito ShredStream shut down on 5 Sep 2026** after a 60-day notice in early July. Jito pointed users to **DoubleZero Edge**, a paid private-fiber shred feed covering 62.6% of stake. On 9 Sep 2026 DoubleZero cut off RPCs that had been retransmitting its feed without a licence and claimed a 70%+ lead on leader shreds. Third-party benchmarks had already put Jito's feed 6.5ms behind at the median. Early state is now a licensed product.
+- **Jito ShredStream shut down on 5 Sep 2026** after a 60-day notice in early July. Jito pointed users to **DoubleZero Edge**, a paid private-fiber shred feed covering 62.6% of stake. On 9 Sep 2026 DoubleZero cut off RPCs that had been retransmitting its feed without a licence and claimed a 70%+ lead on leader shreds. A competing vendor's benchmark (OrbitFlare, Frankfurt) had already put Jito's feed 6.5ms behind its own at the median. Early state is now a licensed product.
 - **BAM preconfirmations went live 9 Sep 2026** via Helius and Triton: BAM-sequenced transactions are streamed to subscribers before the block, a claimed 5–10ms p50 edge over shreds. Revenue splits 35% to BAM validators (stake-weighted, paid as priority fees), 35% to the Jito DAO, 30% to distribution partners; payouts start October 2026. A preconfirmation is a schedule, not a guarantee; the BAM Verifier disconnects validators that deviate.
 
 Together these two events mark the point where **information about the next block became a priced good** sold by the block builder and the network operator, rather than something a searcher could infer for free by running nodes.
 
 ### Protocol changes that touch MEV
 
+<!-- level: expert -->
+
 | Change | Status | Effect on MEV |
 |---|---|---|
 | SIMD-0096: 100% of priority fees to leader | Live Feb 2025 | Made priority fee a full substitute for tips; Harmonic's model depends on it |
-| SIMD-0525: slot time 400→350→300→250→200ms | 350ms at epoch 1019 (19 Aug 2026), 300ms at epoch 1023 (25 Aug 2026); 250/200 pending | Shorter leader windows, more slots per second, less time per batch auction |
+| SIMD-0525: slot time 400→350→300→250→200ms | 350ms at epoch 1019 (19 Aug 2026), 300ms at epoch 1023 (25 Aug 2026), 250ms at epoch 1037 (18 Sep 2026); 200ms has no announced date | Shorter leader windows, more slots per second, less time per batch auction |
 | SIMD-0123 (+0291, 0249, 0232): block-revenue commission | Supporting gates live Jun–Sep 2026; sharing gate not yet active as of 17 Sep 2026 | Lets validators pass priority fees to stakers; default keeps 100% |
-| SIMD-0553: 2,500-lamport inclusion fee to leader + resource fee 0.5 lamports/CU, burned | Proposed by Temporal Jun 2026; vote 5–18 Aug 2026; outcome not confirmed in sources read | Prices compute rather than signatures; raises the cost of spam probing; 648→7,500–9,000 SOL/day burn at terminal rate |
-| SIMD-0550: faster disinflation | Voted alongside 0553 | Makes fee and MEV income a larger share of validator revenue over time |
-| Alpenglow (SIMD-0326): Votor + Rotor, ~150ms finality | Community cluster May 2026; Agave v4.3 mainnet 18 Sep 2026 with inert code; testnet 23 Sep; mainnet gates tentatively from 28 Sep 2026, Votor first, Rotor later | Removes vote transactions from blocks; compresses the window in which a leader can delay for ordering gain; enables multiple concurrent leaders later |
+| SIMD-0553: 2,500-lamport inclusion fee to leader + resource fee 0.5 lamports/CU, burned | Proposed by Temporal Jun 2026; signalling passed the 15% threshold in Aug; **rejected** in the stake-weighted vote that closed 28 Aug 2026 | Would have priced compute rather than signatures and raised the cost of spam probing; 648→7,500–9,000 SOL/day burn at terminal rate. Not adopted |
+| SIMD-0550: faster disinflation | Approved in the same vote (closed 28 Aug 2026); feature-gate activation not yet scheduled | Makes fee and MEV income a larger share of validator revenue over time |
+| Alpenglow (SIMD-0326): Votor + Rotor, ~150ms finality | Community cluster May 2026; Agave v4.3 (carries Votor, inert until the gate) reached general mainnet adoption 21 Sep 2026; testnet activation the week of 22 Sep; mainnet feature activation resumes 28 Sep 2026 but no Alpenglow mainnet date is set; Votor first, Rotor later | Removes vote transactions from blocks; compresses the window in which a leader can delay for ordering gain; enables multiple concurrent leaders later |
 
 ### Where the order flow went
 
@@ -165,6 +217,8 @@ Two structural shifts matter more to a searcher than any block-builder change.
 
 ### Validator economics
 
+<!-- level: expert -->
+
 - Inflation is ~90% of staking yield (Q2 2026). Tips plus priority fees are the rest, and the split has swung toward priority fees (60% of REV) as the Jito tip auction thinned.
 - jitoSOL passes 92–95% of rewards to holders (5–8% commission). Its advertised MEV boost of 1.2–1.8% APY (early 2026) is not consistent with Blockworks' Q2 2026 median implied APY of ~5.7%, which is barely above native; the boost has shrunk with tips. jitoSOL supply fell 20% QoQ to 9.86M SOL and 17.3% LST share in Q2 2026.
 - Jito's own revenue mix flipped: staking fees were 57% of Q2 2026 protocol revenue and tip-related fees 42%. Its next bets are BAM plugin fees, preconfirmation revenue, and the JTX trading front end (launched 14 Jul 2026).
@@ -174,11 +228,13 @@ Two structural shifts matter more to a searcher than any block-builder change.
 
 **Who extracts.** Concentration is high at the top and long-tailed at the bottom. One program (DeezNode's Vpe) did about half of all sandwiches in late 2024; on 24 Sep 2026 the top address on sandwiched.me took ~40% of the day's SOL across 518 active attacker addresses. On the arbitrage side, 2024's 90.4M successful arbs averaged $1.58 each, which is a market of many small bots plus a few large operators taking the multi-thousand-dollar backruns. Ghost's tip data (arb bots paying 50–60% of profit as tips, sandwich bots 15–20%) shows the benign side is the one competing hardest. The proprietary AMM operators and RFQ market makers are now the largest "searchers" in economic terms, although they never submit a bundle labelled as such.
 
-**Who captures.** Validators and their stakers receive the tips and all priority fees; Jito's DAO takes a protocol cut of tips (6% per 2026 sources; historically described as a 5% Labs fee plus a 3% TipRouter fee split among DAO, node operators and vaults, unverified) and 35% of preconfirmation revenue; Harmonic takes nothing; DoubleZero and its fiber contributors take shred-feed subscriptions; distribution partners (Helius, Triton) take 30% of preconfirmation revenue. TipRouter has routed more than $250M since February 2025.
+**Who captures.** Validators and their stakers receive the tips and all priority fees; Jito's DAO takes a 6% protocol cut of tips (a 3% Block Engine fee plus the 3% TipRouter fee, all routed to the DAO since JIP-24 in August 2025) and 35% of preconfirmation revenue; Harmonic takes nothing; DoubleZero and its fiber contributors take shred-feed subscriptions; distribution partners (Helius, Triton) take 30% of preconfirmation revenue. TipRouter has routed more than $250M since February 2025.
 
-**Who pays.** Three groups. **LPs in passive pools**, through LVR, which is the same number as arbitrage profit seen from the other side (see `mev-strategies/arbitrage.md`); this bill is shrinking on majors because prop AMMs do not bleed. **Sandwiched users**, $370–500M over the 16 months to May 2025 and a few dollars per victim on tens of thousands of victims a day in September 2026. **Everyone, via spam**: failed transactions pay base fees and consume blockspace, which SIMD-0553 is designed to make expensive.
+**Who pays.** Three groups. **LPs in passive pools**, through LVR, which is the same number as arbitrage profit seen from the other side (see `mev-strategies/arbitrage.md`); this bill is shrinking on majors because prop AMMs do not bleed. **Sandwiched users**, $370–500M over the 16 months to May 2025 and a few dollars per victim on tens of thousands of victims a day in September 2026. **Everyone, via spam**: failed transactions pay base fees and consume blockspace, which SIMD-0553 was designed to make expensive before validators rejected it in August 2026.
 
 ## 6. Trends and open questions, next 12 months
+
+<!-- level: intermediate -->
 
 **Does BAM plus Harmonic remove the searcher, or relocate it?** Relocate. Both stacks still need someone to find the backrun and pay for it; what they remove is the bundle-versus-banking-stage lock race and the leader's ability to self-deal. The searcher role migrates toward three places: plugin authors who sit inside the application's ordering rule, market makers who quote on prop AMMs and RFQs, and preconfirmation subscribers who act 5–10ms before the block. The independent bundle-submitting searcher of 2024 is the party being squeezed.
 
@@ -186,13 +242,15 @@ Two structural shifts matter more to a searcher than any block-builder change.
 
 **Encrypted and TEE ordering.** BAM's TEE is the first production example; Harmonic's argument is that ordering-rule choice, not hardware trust, is the guarantee. Open questions are attestation transparency, what plugins can see, and whether TEE side channels become a searcher edge.
 
-**MEV under Alpenglow and shorter slots.** 300ms slots and 150ms finality shrink every batch auction and leader window. Helius's own analysis expects leaders with in-house building to gain and independent latency arbitrageurs to lose. Vote transactions leave blocks, freeing compute. Multiple concurrent leaders, if they arrive, would split the write set and create cross-lane MEV that nobody has designed for.
+**MEV under Alpenglow and shorter slots.** 250ms slots and 150ms finality shrink every batch auction and leader window. Helius's own analysis expects leaders with in-house building to gain and independent latency arbitrageurs to lose. Vote transactions leave blocks, freeing compute. Multiple concurrent leaders, if they arrive, would split the write set and create cross-lane MEV that nobody has designed for.
 
 **Regulatory attention.** The Peraire-Bueno Ethereum case ended in a mistrial in November 2025 with prosecutors seeking a retrial; it turned on exploiting MEV bots, not on sandwiching itself, and left the legality of sandwiching unresolved. ESMA published a risk analysis of MEV in July 2025. The SEC/CFTC March 2026 interpretive release classified SOL as a digital commodity and said nothing specific about MEV. Nothing today restricts benign extraction; sandwiching remains a reputational and delegation problem rather than a legal one, and that could change with one enforcement action.
 
-**Searcher margin compression.** Tips per Jito transaction halved in one quarter while transaction count held flat. Prop AMMs removed most stale-quote arbitrage on majors. Aggregators internalise backruns. Shred and preconf data are now paid. Fees on compute (SIMD-0553) make probing dearer. Every one of these is a permanent, not cyclical, reduction in the share of DEX volume that reaches an open ordering market.
+**Searcher margin compression.** Tips per Jito transaction halved in one quarter while transaction count held flat. Prop AMMs removed most stale-quote arbitrage on majors. Aggregators internalise backruns. Shred and preconf data are now paid. Compute-priced fees (SIMD-0553) would have made probing dearer, but validators rejected it in August 2026. Every one of the others is a permanent, not cyclical, reduction in the share of DEX volume that reaches an open ordering market.
 
 ## 7. What this means for a searcher operation
+
+<!-- level: expert -->
 
 **Where the remaining edge is**
 
@@ -204,20 +262,21 @@ Two structural shifts matter more to a searcher than any block-builder change.
 **What has closed**
 
 - Mempool sandwiching (March 2024) and its private-mempool successors on any BAM or Harmonic slot; what remains is small, blind, and a delegation-program liability for any validator that hosts it.
-- Spam as a substitute for latency: 300ms slots, tighter schedulers, and compute-priced fees make blind probing lose money.
+- Spam as a substitute for latency: 250ms slots and tighter schedulers make blind probing lose money (compute-priced fees would have added to this, but SIMD-0553 was rejected).
 - Free early sight (ShredStream) and majors arbitrage against passive pools.
 
 **What to watch**
 
 - Blockworks Q3 2026 Jito report: whether tips stabilise below $10M/quarter, and first BAM preconfirmation revenue.
 - Ghost per-client sandwich rates for 2026; whether the residual is on plain Agave slots.
-- Alpenglow mainnet activation (tentatively from 28 Sep 2026) and the 250ms slot gate.
-- SIMD-0553 outcome and phase-in; SIMD-0123 block-revenue sharing activation.
+- Alpenglow mainnet activation (no date set as of 25 Sep 2026; mainnet feature activation resumes 28 Sep) and the 200ms slot gate.
+- Whether a revised SIMD-0553 returns after its August 2026 rejection; SIMD-0550 and SIMD-0123 feature-gate activation.
 - Harmonic's response to preconfirmations, and whether its stake share moves from 21%.
 - Any Jupiter, DFlow or Titan move to a formal order-flow auction with searcher rebates, which would reopen internalised flow to outside bidders.
 
 ## Sources
 
+- Jito Foundation forum, "JIP-24: Jito DAO Receives All Jito Block Engine Fees and Future BAM Fees": https://forum.jito.network/t/jip-24-jito-dao-receives-all-jito-block-engine-fees-and-future-bam-fees/860
 - Helius, "Solana MEV Report: Trends, Insights, and Challenges" (Jan 2025): https://www.helius.dev/blog/solana-mev-report
 - Helius, "Solana's Proprietary AMM Revolution" (2025): https://www.helius.dev/blog/solanas-proprietary-amm-revolution
 - Helius, "Solana Foundation Delegation Program" (Aug 2024): https://www.helius.dev/blog/solana-foundation-delegation-program-sfdp
@@ -230,11 +289,13 @@ Two structural shifts matter more to a searcher than any block-builder change.
 - Solana Compass, "Jito BAM Preconfirmations Launch" (Sep 2026): https://solanacompass.com/news/jito-bam-preconfirmations-go-live-on-solana-covering-34-of-network-stake
 - Solana Compass, "DoubleZero Removes Unauthorized Retransmitters" (Sep 2026): https://solanacompass.com/news/doublezero-removes-unauthorized-shred-retransmitters-claims-70-plus-lead-over-all-competitors
 - Solana Compass, SIMD-0553 / SIMD-0550 vote coverage (Aug 2026): https://solanacompass.com/news/solana-formal-vote-on-simd-0553-and-simd-0550-has-10-days-left
+- Twinstake, "Solana's Emissions Reform: Approved, and What Happens Next" (SIMD-0550 approved, SIMD-0553 rejected, vote closed 28 Aug 2026): https://www.twinstake.com/reports/solanas-emissions-reform-approved-and-what-happens-next
+- Jito Foundation forum, JIP-15 "Authorization of New Blacklist for Malicious MEV Activity" (Mar 2025): https://forum.jito.network/t/jip-15-authorization-of-new-blacklist-for-malicious-mev-activity/639
 - Solana Compass, Ghost at Accelerate 2025, "The State of Solana MEV" (20 May 2025): https://solanacompass.com/learn/accelerate-25/scale-or-die-at-accelerate-2025-the-state-of-solana-mev
 - Ghost / sandwiched.me, "State of Solana MEV May 2025": https://sandwiched.me/research/state-of-solana-mev-may-2025-analysis
 - Ghost / sandwiched.me, research index and live dashboard: https://sandwiched.me/research · https://sandwiched.me/sandwiches
 - Gerzon, Weintraub, In, Mislove, Nita-Rotaru, "Quantifying the Threat of Sandwiching MEV on Jito", ACM IMC 2025: https://dl.acm.org/doi/10.1145/3730567.3764493
-- Wang, Saraf, Heimbach, Babel, Zhang, "Blockspace Under Pressure: An Analysis of Spam MEV on High-Throughput Blockchains", arXiv 2604.00234 (Jul 2026): https://arxiv.org/abs/2604.00234
+- Wang, Saraf, Heimbach, Babel, Zhang, "Blockspace Under Pressure: An Analysis of Spam MEV on High-Throughput Blockchains", arXiv 2604.00234 (Mar 2026, revised Jul 2026): https://arxiv.org/abs/2604.00234
 - Zheng, Wan, Lo, Xie, Yang, "Why Does My Transaction Fail? A First Look at Failed Transactions on the Solana Blockchain", arXiv 2504.18055 (Apr 2025): https://arxiv.org/abs/2504.18055
 - Umbra Research, "MEV on Solana" (May 2023): https://www.umbraresearch.xyz/writings/mev-on-solana
 - The Block, "Solana Foundation removes certain operators from delegation program" (10 Jun 2024): https://www.theblock.co/news/ecosystems/2024-06-10-solana-foundation-removes-certain-operators-from-delegation-program-over-malicious-sandwich-attacks-299244
@@ -249,8 +310,10 @@ Two structural shifts matter more to a searcher than any block-builder change.
 - Syndica, "Deep Dive: Solana Onchain Activity, April 2026": https://blog.syndica.io/deep-dive-solana-onchain-activity-april-2026/
 - SolanaFloor, "Solana Validator Independence Grows as Foundation Stake Drops to 5%" (Mar 2026): https://solanafloor.com/news/solana-validator-independence-grows
 - xroot.dev, "Solana Slots Are Going to 200ms" (SIMD-0525 activation dates): https://xroot.dev/blog/solana-200ms-slots-simd-0525
+- Solana Compass, "Solana Activates 250ms Slot Time at Epoch 1037" (18 Sep 2026): https://solanacompass.com/news/solana-activates-250ms-slot-time-at-epoch-1037-fourth-step-of-simd-0525
 - xroot.dev, "Validators will share block revenue with you" (SIMD-0123 status, 17 Sep 2026): https://xroot.dev/blog/solana-validator-block-revenue-sharing-two-commissions
 - Blockdaemon, "SIMD-0553: What Solana's fee burn vote means": https://www.blockdaemon.com/blog/what-is-simd-0553-and-why-does-it-matter-for-institutional-sol-holders
+- Solana Compass, Agave 4.3 release schedule and Alpenglow testnet activation (Sep 2026): https://solanacompass.com/news/anza-publishes-agave-43-release-schedule-alpenglow-consensus-targets-september-28-mainnet-activation · https://solanacompass.com/news/alpenglow-activates-on-solana-testnet-as-frankendancer-era-ends-agave-v44-schedule-targets-november-9-mainnet-activation
 - Solana, Alpenglow upgrade page: https://solana.com/upgrades/alpenglow · CoinDesk, Alpenglow community testing (11 May 2026): https://www.coindesk.com/tech/2026/05/11/the-biggest-consensus-overhaul-in-solana-history-is-officially-live-for-testing
 - Chorus One, "Market Making, propAMMs, and Solana Execution Quality Landscape" (19 Dec 2025): https://chorus.one/reports-research/market-making-propamms-and-solana-execution-quality-landscape
 - DL News, "Solana's $6bn 'dark' exchanges" (7 Aug 2025): https://www.dlnews.com/articles/defi/solana-dark-amms-make-trading-more-efficient-but-at-a-cost/

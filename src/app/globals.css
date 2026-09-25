@@ -27,6 +27,7 @@
   --color-fg-faint: var(--fg-faint);
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
+  --color-warn: var(--warn);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
 }
@@ -87,7 +88,8 @@ body {
   line-height: 1.75;
   color: var(--fg);
 }
-.doc > * + * {
+.doc > * + *,
+.doc .mode-block > * + * {
   margin-top: 1.1em;
 }
 .doc h2,
@@ -235,7 +237,8 @@ body {
   border: 1px solid rgba(251, 191, 36, 0.3);
   border-radius: 999px;
   padding: 0.05em 0.5em;
-  white-space: nowrap;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
   cursor: help;
 }
 
@@ -267,4 +270,69 @@ body {
 .scroll-thin {
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
+}
+
+/* Reading modes. <html data-mode> is set before paint; anything tagged with data-modes that
+   does not list the current mode is folded away. */
+html[data-mode="beginner"] [data-modes]:not([data-modes~="beginner"]),
+html[data-mode="intermediate"] [data-modes]:not([data-modes~="intermediate"]),
+html[data-mode="expert"] [data-modes]:not([data-modes~="expert"]) {
+  display: none;
+}
+.doc .mode-block:first-child > h2:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.mode-switch {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+}
+.mode-switch button {
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--fg-faint);
+  transition: color 0.15s, background-color 0.15s;
+}
+.mode-switch button:hover {
+  color: var(--fg);
+}
+html[data-mode="beginner"] .mode-switch [data-value="beginner"],
+html[data-mode="intermediate"] .mode-switch [data-value="intermediate"],
+html[data-mode="expert"] .mode-switch [data-value="expert"] {
+  color: var(--fg);
+  background: var(--bg-hover);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+.mode-notice [data-mode-text] {
+  display: none;
+}
+html[data-mode="beginner"] .mode-notice [data-mode-text="beginner"],
+html[data-mode="intermediate"] .mode-notice [data-mode-text="intermediate"],
+html[data-mode="expert"] .mode-notice [data-mode-text="expert"] {
+  display: block;
+}
+
+.mode-card-check {
+  opacity: 0;
+}
+html[data-mode="beginner"] .mode-card[data-value="beginner"],
+html[data-mode="intermediate"] .mode-card[data-value="intermediate"],
+html[data-mode="expert"] .mode-card[data-value="expert"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-soft);
+}
+html[data-mode="beginner"] .mode-card[data-value="beginner"] .mode-card-check,
+html[data-mode="intermediate"] .mode-card[data-value="intermediate"] .mode-card-check,
+html[data-mode="expert"] .mode-card[data-value="expert"] .mode-card-check {
+  opacity: 1;
+  color: var(--accent-strong);
+  border-color: var(--accent);
 }

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { DOCS, SECTIONS, getDocMeta, loadDoc, neighbours } from "@/lib/content";
 import { MobileNav, Sidebar } from "@/components/Sidebar";
 import { Toc } from "@/components/Toc";
+import { ModeNotice } from "@/components/ModeNotice";
 
 export const dynamicParams = false;
 
@@ -49,6 +50,8 @@ export default async function DocPage({ params }: PageProps<"/docs/[slug]">) {
             </h1>
             <p className="mt-4 text-lg leading-8 text-fg-muted">{doc.blurb}</p>
           </header>
+
+          <ModeNotice toc={doc.toc} />
 
           <div className="doc" dangerouslySetInnerHTML={{ __html: doc.html }} />
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DOCS, SECTIONS, docsInSection } from "@/lib/manifest";
 import { DocCard } from "@/components/DocCard";
+import { ModePicker } from "@/components/ModePicker";
 
 export default function Home() {
   const featured = DOCS.filter((d) => d.section === "overview");
@@ -53,6 +54,17 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="mx-auto max-w-6xl px-6 pt-16">
+        <div className="mb-6">
+          <h2 className="text-2xl font-semibold tracking-tight">Pick how deep to go</h2>
+          <p className="mt-1 max-w-2xl text-sm text-fg-muted">
+            Every explainer is written in three layers. Choose a reading level once and each page
+            shows only what fits it; switch any time from the header.
+          </p>
+        </div>
+        <ModePicker />
+      </section>
+
       <section className="mx-auto max-w-6xl px-6 py-16">
         <div className="grid gap-4 md:grid-cols-2">
           {featured.map((d) => (
@@ -79,12 +91,6 @@ export default function Home() {
         ))
       }
 
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-8 text-xs text-fg-faint">
-          <span>MEV Handbook. Research notes, not investment advice.</span>
-          <span>Figures dated September 2026. Claims marked (unverified) lack a primary source.</span>
-        </div>
-      </footer>
-    </main >
+    </main>
   );
 }

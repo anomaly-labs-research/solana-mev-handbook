@@ -4,6 +4,28 @@ _As of Sep 2026._
 
 Liquidation is the one MEV strategy the protocols *want* you to run. A lending market cannot survive without someone willing to buy bad collateral the moment it goes bad, so every lender publishes a bounty and lets anyone claim it. The strategy is simple to state: notice a loan has gone underwater before anyone else does, repay part of it, keep the discounted collateral. Everything hard about it is in the words "before anyone else does."
 
+<!-- only: beginner -->
+
+## In plain terms
+
+**What it is.** A lending protocol is a program that lets anyone borrow one token by locking up more than its value in another token. Nobody checks who you are, so the locked tokens, called **collateral**, are the lender's only guarantee. If their price falls too far, the protocol lets any stranger step in: repay part of the loan and take collateral worth a little more than what they repaid. That extra is the **liquidation bonus**, and the strangers who collect it are **liquidators**. This page is about being one of them.
+
+**A tiny example.** Alice locks up 100 SOL worth $20,000 and borrows 14,000 USDC, a token pegged to the dollar. The rule is that her debt may not exceed 80 percent of her collateral's value. SOL falls to $170, her collateral is worth $17,000, and her debt is 82 percent of that: over the line. You repay 2,800 USDC of her debt and receive $2,940 of her SOL, a 5 percent bonus, so $140 gross. After the protocol keeps a slice, you sell the SOL, and you pay to have your transaction placed ahead of the other bots, you are left with something like $40 to $90. On the newest Solana lenders the bonus is 0.1 percent instead of 5 percent, so the same event pays $2.80.
+
+**Why the protocols want you.** A lender nobody liquidates ends up with loans worth more than the collateral behind them, and depositors eat the loss. So liquidation is the one kind of MEV that protocols advertise and pay for. Racing other liquidators is the design; using a relationship with a block producer to hold back a borrower's top-up, or to cut ahead of a rival in the same block, is not.
+
+**Why it is hard.** Everything is public: every loan, the price at which it can be liquidated, and the size of the bonus. The price feed everyone watches, called an **oracle** (a service that posts real-world prices onto the chain), updates several times a second and every bot sees it at the same moment. The only thing that separates liquidators is who gets a transaction into the block first: fast hardware, a short path to the block producer, and a tip bid. In Kamino's October 2025 crash 114 liquidators took part and a handful handled most of the volume. The prizes are also shrinking: Kamino and Jupiter Lend now charge borrowers as little as 0.1 percent, so this is a volume business where the cost of each transaction decides who survives.
+
+**Who wins, who pays.** The borrower pays the bonus out of their collateral. A slice goes to the protocol or its insurance fund. The liquidator keeps the rest, minus the validator tip and whatever is lost selling the seized tokens into a market that is, by definition, falling. Most of a year's income arrives in a few hours of crashes, when everyone's positions cross the line at once.
+
+**What can go wrong.** You win the race, but the seized token keeps falling before you can sell it. The collateral is worth less than the debt by the time anyone reacts, so there is no bonus left; that is **bad debt**. The oracle price you acted on is already stale. You pay a tip and lose anyway. Or the protocol changes the rules mid-crash: pauses liquidations, or, as Solend's governance did in 2022, votes to take over a whale's account directly.
+
+**Terms you will meet on this page.** **LTV** (loan-to-value) is debt divided by collateral value. The **liquidation threshold** is the LTV at which liquidation is allowed. A **health factor** is the same idea as one number, healthy above 1. The **close factor** is how much of the debt one liquidation may repay. A **flash loan** is an uncollateralized loan repaid within the same transaction, which is how liquidators work with almost no capital. **Atomic** means all-or-nothing: the transaction either fully succeeds or leaves no trace. A **slot** is Solana's block interval, a quarter of a second. A **Jito bundle** is a package of transactions that lands in order or not at all, with a tip attached. An **LST** (liquid staking token) is a tradeable token that represents staked SOL and slowly gains value from staking rewards.
+
+**Bottom line.** Liquidation is the friendliest kind of MEV, because protocols need it and pay for it, and one of the least forgiving to run, because everything is public and only speed separates you from the crowd. It reuses almost the whole arbitrage stack, and the bounty keeps shrinking as the crowd grows.
+
+<!-- /only -->
+
 ## The core idea: overcollateralized lending
 
 A DeFi lender does not know who you are, so it only lends against collateral worth *more* than the loan. Three numbers describe every loan:
@@ -12,11 +34,17 @@ A DeFi lender does not know who you are, so it only lends against collateral wor
 - **Max LTV** (also "collateral factor") — the most you can borrow at origination. Above this you can't *open* more debt, but nothing bad happens yet.
 - **Liquidation threshold** (Kamino calls it "liquidation LTV", Fluid "LT") — the LTV at which anyone may start seizing your collateral. Always set above max LTV, so there's a buffer.
 
+<!-- level: intermediate -->
+
 Some protocols express the same thing as a **health factor**: risk-weighted collateral divided by risk-weighted debt, healthy above 1, liquidatable below. MarginFi's version is `Σ deposits × asset_weight × price` over `Σ borrows × liability_weight × price`, where asset weights are below 1 (SOL at 0.80 means $1,000 of SOL counts as $800) and liability weights are above 1. Same idea, different arithmetic.
+
+<!-- /level -->
 
 Two things push a position toward the threshold: collateral price falling, and interest silently accruing on the debt. Kamino's docs give the second a number — at 10% APR a position drifts from 70% to 77% LTV in a year with zero price movement.
 
 ## The liquidation mechanic
+
+<!-- level: intermediate -->
 
 When a position crosses the threshold, any wallet may call the protocol's liquidate instruction. The liquidator hands over some of the borrowed asset, the protocol reduces the borrower's debt by that amount, and pays the liquidator back in collateral worth *more* than what they repaid. Three dials govern it:
 
@@ -27,6 +55,8 @@ When a position crosses the threshold, any wallet may call the protocol's liquid
 Everything else — oracles, flash loans, ticks, bundles — is machinery for collecting that bonus faster and cheaper than the next bot.
 
 ## A worked example
+
+<!-- level: intermediate -->
 
 Alice deposits 100 SOL at $200 ($20,000) and borrows 14,000 USDC. LTV 70%. Say the reserve's liquidation threshold is 80% and the bonus is 5%.
 
@@ -50,17 +80,21 @@ Now redo the table with a 0.1% penalty (Jupiter Lend, or Kamino's new floor on m
 
 ## Why it's a speed race
 
+<!-- level: intermediate -->
+
 The bonus is fixed by the protocol, and every position's liquidation price is public. So the *only* thing that differentiates liquidators is who lands first once a position crosses. Every other participant sees the same oracle print in the same slot; the winner is whoever had the transaction built, signed and in the leader's queue.
 
 Three details make it especially tight on Solana:
 
-- **Slots are 300ms** (400ms until August 2026). A position that becomes liquidatable in slot N is usually gone by slot N+1. There's no mempool to watch, so the "proactive" strategy from Ethereum (watching pending transactions that will *create* a liquidation) mostly doesn't exist. You react to state.
+- **Slots are 250ms** (400ms until August 2026, then cut in 50ms steps to 250ms on 18 September 2026, epoch 1037; 200ms is the next planned step). A position that becomes liquidatable in slot N is usually gone by slot N+1. There's no mempool to watch, so the "proactive" strategy from Ethereum (watching pending transactions that will *create* a liquidation) mostly doesn't exist. You react to state.
 - **Partial liquidation splits the prize.** With a 20% close factor and a scaling bonus, the first liquidator takes the cheapest, safest slice. Deeper rounds pay more bonus but the collateral is now falling in a falling market.
 - **Oracle cadence is the clock.** Pyth prices update every 400ms on Pythnet; the race starts the moment a price update that puts a position underwater can be posted on-chain. Whoever posts that update *and* the liquidate call in one transaction moves first (see oracles below).
 
 Kamino's October 10, 2025 post-mortem shows the field: 114 distinct liquidators participated during the crash, 4 processed more than $1M each, 28 more than $100k. The head of the distribution took most of the volume.
 
 ## The liquidator's workflow
+
+<!-- level: intermediate -->
 
 1. **Index every position.** Pull all obligations / margin accounts / vault positions for the markets you cover and keep them in memory, updated by account subscriptions. For each one, precompute the liquidation price of each collateral asset holding the others fixed.
 2. **Watch the oracles, not the positions.** Positions don't move; prices do. Subscribe to Pyth (Hermes) and Switchboard feeds and to the on-chain price accounts. On every tick, walk the sorted list of liquidation prices and pull out any position that just crossed.
@@ -71,11 +105,17 @@ Kamino's October 10, 2025 post-mortem shows the field: 114 distinct liquidators 
 
 ## Oracles define the race
 
+<!-- level: intermediate -->
+
 Every liquidation is triggered by an oracle print, so oracle design *is* liquidation design.
 
 **Pyth pull oracles.** Pyth aggregates publisher prices on Pythnet every 400ms and exposes signed updates through the Hermes API. Nobody pushes them on-chain by default: the consumer fetches an update, posts it in a price-update account and reads it in the same transaction. Programs then verify freshness with `get_price_no_older_than(max_age)` — Pyth's example uses 30 seconds. Two consequences for liquidators: you can carry your own trigger price into the transaction, and if you don't, you're waiting for someone else's update. Pyth's own best-practices page is blunt about the resulting edge: "adversaries see price changes a short time before the protocol does." (Since August 26, 2026 the recommended Hermes endpoint is `pyth.dourolabs.app/hermes`, not `hermes.pyth.network`.)
 
+<!-- level: expert -->
+
 **Confidence intervals.** Pyth publishes each price as μ ± σ. The recommended lending pattern is asymmetric: value collateral at the lower bound (μ − σ) and debt at the upper bound (μ + σ). MarginFi does exactly this and additionally clamps or aborts if the interval exceeds 5% of price. For a liquidator this means the effective liquidation price during volatile moments is *worse* for the borrower than the headline price — positions cross earlier — and that a spike in σ can create or destroy an opportunity without the mid moving.
+
+<!-- /level -->
 
 **Switchboard.** Also pull-based, TEE-attested, with "managed update instructions" you include in your own transaction. Its distinctive feature for lenders is custom feeds: an LST feed can compute fair value from the stake pool instead of reading a DEX price.
 
@@ -84,6 +124,8 @@ Every liquidation is triggered by an oracle print, so oracle design *is* liquida
 **TWAP guards.** Several protocols compare spot oracle against a TWAP and disable *borrowing* when they diverge (Kamino's SOL reserve used a 10% tolerance). Velocity rejects liquidations if oracle and 5-minute TWAP diverge by 50% or more. A third-party analysis of the Oct 10, 2025 crash argued Kamino's TWAP tolerance blocked new borrows but did not gate liquidations, and estimated ~$1.08M of liquidations fired at flash-crash prices on positions that were healthy at TWAP (their estimate, not Kamino's). Whether that's a bug or the design, it's the kind of parameter you must read per protocol.
 
 ## Flash loans and unwinding collateral
+
+<!-- level: intermediate -->
 
 You don't need capital to liquidate on Solana — you need a flash loan and an atomic transaction.
 
@@ -98,6 +140,8 @@ The canonical transaction is: flash borrow debt asset → liquidate → swap sei
 
 ## The Solana lenders compared
 
+<!-- level: intermediate -->
+
 | | Kamino Lend | MarginFi / Project 0 | Save (ex-Solend) | Drift → Velocity | Jupiter Lend (Fluid) |
 |---|---|---|---|---|---|
 | Position unit | Obligation | Margin account | Obligation | Cross-margined subaccount | Tick-based vault position (NFT) |
@@ -105,17 +149,23 @@ The canonical transaction is: flash borrow debt asset → liquidate → swap sei
 | Close factor | 20–25% default, 10% on some, 100% near insolvency | Only enough to restore health | 20% | Ramped partial liquidation to a 2%-of-notional buffer | Only what is needed; 100% absorb past LML |
 | Bonus / penalty | Curve: min → max with breach depth; floor cut to 0.1% Sep 2025 | 5% (2.5% liquidator, 2.5% insurance) | 5% | Per-market liquidator + IF + protocol fee; fee ages upward | As low as 0.1% |
 | Oracle | Pyth, Switchboard, stake-rate for LSTs | Pyth/Switchboard, μ±σ pricing | Pyth/Switchboard | Oracle only, 5-min TWAP band | Pyth |
-| Scale (2026) | Largest; ~$1.7–3.2B deposits | Sharply reduced after 2025 | ~$300M TVL | Relaunching after Apr 2026 exploit | $2.41B deposits, ~$1.05B loans |
+| Scale (2026) | Second by deposits since Sep 2026; ~$1.4B TVL plus ~$1.05B borrowed (DefiLlama) | Sharply reduced after 2025 (~$48M TVL) | ~$95M TVL | Relaunching after Apr 2026 exploit | $2.41B deposits, ~$1.05B loans (unverified) |
+
+<!-- level: expert -->
 
 **Kamino Lend.** The position is an **obligation** holding multiple deposits and borrows. Reserves can be placed in **elevation groups (eMode)** for correlated pairs: SOL/USDC standard at ~75% max LTV, LST/SOL eMode at ~87–90% (up to ~10x leverage). A **borrow factor** scales risky debt (BONK at 2.0 halves borrowing capacity). The bonus formula is the interesting part: `bonus = max(minBonus, currentLTV − liquidationLTV)`, capped at the reserve max and then at `100% − currentLTV` so the liquidation can't itself create bad debt; at LTV ≥ 99% it switches to a ~1% bad-debt bonus for full recovery. So a position 0.5% over the line pays the floor; one 8% over pays 8%. **Auto-deleverage** is a separate mechanism: when a reserve's deposit or borrow cap is cut, borrowers get notice (docs cite 72 hours), then a `deleverage_liquidation_LTV` that decays over time makes positions liquidatable from highest LTV down, with a penalty floored at 50 bps and capped at the lowest liquidation penalty among the position's assets. Market owners also have a `price_triggered_liquidation_disabled` switch for oracle incidents.
 
+<!-- /level -->
+
 **MarginFi / Project 0.** Health is weighted assets minus weighted liabilities using maintenance weights and confidence-adjusted prices. Liquidation repays the minimum needed to bring health back to zero, charging 5% split between liquidator and insurance fund. MarginFi's Q1 2025 was the largest liquidation quarter any Solana lender has published: $1.7B across 119,000+ events and $88.5M in fees, with $517M across ~9,700 events in the single week of Feb 17–23 as SOL fell from its ~$295 January high. In 2026 the protocol was folded into **Project 0**, a cross-venue prime-broker design; marginfi runs as a venue on it with much lower TVL than its peak.
 
-**Save (formerly Solend).** The original Solana lender and the simplest mechanics: 20% close factor, 5% bonus, isolated pools after the 2024 rebrand. Its docs' worked example is the template everyone copies (repay $1,600, receive $1,680). Roughly $300M TVL and a declining share.
+**Save (formerly Solend).** The original Solana lender and the simplest mechanics: 20% close factor, 5% bonus, isolated pools after the 2024 rebrand. Its docs' worked example is the template everyone copies (repay $1,600, receive $1,680). Roughly $95M TVL (DefiLlama, Sep 2026) and a declining share.
 
 **Drift → Velocity.** Drift's spot borrows and perps were **cross-margined** in one subaccount, so a liquidation was computed at account level: cancel open orders first, then transfer asset/liability pairs to the liquidator at oracle price plus a per-market liquidator fee, with a separate insurance-fund fee. Insolvent remainders went to the insurance fund, then social loss. On April 1, 2026 Drift lost ~$285M when attackers who had socially engineered Security Council members into pre-signing durable-nonce transactions took admin control, whitelisted a fake token as collateral and withdrew real assets. The protocol rebranded to **Velocity** on July 1, 2026 and is relaunching. Velocity's documented engine keeps the Drift shape and adds: partial liquidation to maintenance *plus a 2%-of-notional buffer*, a ramp from a configured fraction of the shortfall to 100% over a set duration, a liquidator fee that ages up 0.01 bp per 400ms after a 600-second grace (capped at 3× base or the maintenance ratio), and rejection when oracle and 5-minute TWAP diverge ≥ 50%.
 
 ## Jupiter Lend and the Fluid design
+
+<!-- level: intermediate -->
 
 Jupiter Lend launched in August 2025 as a port of Instadapp's **Fluid**, hit $500M TVL in 24 hours, $1B in 8 days, ~35% of Solana lending by December 2025, and $2.41B in deposits by September 22, 2026. It changed the liquidation business on Solana more than anything since Kamino launched, for one reason: **positions are not liquidated individually.**
 
@@ -128,6 +178,8 @@ Jupiter Lend launched in August 2025 as a port of Instadapp's **Fluid**, hit $50
 The competitive effect was immediate: Kamino's TVL slipped in Jupiter Lend's first week and on September 1, 2025 Kamino cut liquidation penalties from 1% to as low as 0.1% and moved to 10% liquidation increments. For liquidators, the two effects compound: bonuses are smaller *and* the work per event is smaller, so the winners are the ones with the lowest per-transaction cost and the fastest oracle-to-submission path.
 
 ## What the data says
+
+<!-- level: intermediate -->
 
 - **Oct 10, 2025** — SOL fell from $207 to $177 in under an hour (intraday $220 → $177) inside a ~$19.5B crypto-wide liquidation day. Kamino liquidated $20M of collateral across 8,000+ events and 1,700 wallets with zero bad debt; 89.5% of events landed in the single crash hour; liquidators earned ~$260k in total; median borrower loss was 0.07% of position. SOL was 58% of seized collateral, jitoSOL 9.4%; USDC was 76% of repaid debt. USDC borrow rates spiked to 45%. Jupiter Lend processed ~$1.29M (third-party figure). Solana sustained 6–10k TPS with median fees around $0.007.
 - **Feb 2025** — MarginFi's $517M week and $1.7B quarter, above.
@@ -168,9 +220,11 @@ That caveat is the whole ethical line on Solana. Racing other liquidators to a p
 
 ## How this connects to the rest of the stack
 
+<!-- level: intermediate -->
+
 Liquidation is the same machine as arbitrage pointed at a different target:
 
-- **Same speed race, same clock.** Arb reacts to a pool price moving away from fair; liquidation reacts to an oracle price moving a position past its threshold. Both are decided in the 400ms slot in which the state changes, both are won by whoever has the transaction built before the trigger fires, and both die if you're one slot late.
+- **Same speed race, same clock.** Arb reacts to a pool price moving away from fair; liquidation reacts to an oracle price moving a position past its threshold. Both are decided in the 250ms slot in which the state changes, both are won by whoever has the transaction built before the trigger fires, and both die if you're one slot late.
 - **Same oracle feeds.** The Pyth and Switchboard subscriptions an arb engine already runs to know "true" price are exactly the trigger feeds a liquidator needs — plus one twist: for liquidations you also care about the *on-chain* price account, because that, not Hermes, is what the protocol reads. The gap between the two is your lead time.
 - **Same bidding problem.** Priority fees and Jito tips are set against expected profit in both. Liquidation profit is more predictable (the bonus is a formula) but more contested (everyone computes the same formula), so tips as a share of gross tend to run higher.
 - **Same unwind leg.** Seized collateral is an inventory problem identical to the leg of an arb you haven't closed yet, and the swap router that finds the best USDC exit for a stray token serves both.
@@ -179,6 +233,8 @@ Liquidation is the same machine as arbitrage pointed at a different target:
 ---
 
 ## Where to go next
+
+<!-- level: expert -->
 
 - **Per-protocol instruction shapes and account lists** — the doc above is deliberately about mechanics; landing requires knowing each program's accounts.
 - **Oracle-to-submission latency measurement** — how far ahead of the on-chain price account your Hermes feed runs, per feed.
@@ -211,6 +267,8 @@ Liquidation is the same machine as arbitrage pointed at a different target:
 - MixBytes — Modern DeFi lending protocols: Fluid Vault (ticks, branches, absorb): https://mixbytes.io/blog/modern-defi-lending-protocols-how-its-made-fluid-vault
 - Kairos Research — Jupiter Lend, an emerging pillar: https://www.kairosresear.ch/p/jupiter-lend-an-emerging-pillar-in
 - Solana Compass — Jupiter Lend hits $2.41B deposits: https://solanacompass.com/news/jupiter-lend-hits-241-billion-in-total-deposits-a-new-all-time-high
+- DefiLlama — Kamino Lend, Save, marginfi TVL (Sep 2026 figures): https://defillama.com/protocol/kamino-lend, https://defillama.com/protocol/save, https://defillama.com/protocol/marginfi
+- Solana Compass — Solana 250ms slot time goes live at epoch 1037 (18 September 2026): https://solanacompass.com/news/solana-activates-250ms-slot-time-at-epoch-1037-fourth-step-of-simd-0525
 - Pyth Docs — Pull updates: https://docs.pyth.network/price-feeds/pull-updates
 - Pyth Docs — Best practices (confidence, staleness, latency): https://docs.pyth.network/price-feeds/core/best-practices
 - Pyth Docs — Using real-time data in Solana programs: https://docs.pyth.network/price-feeds/use-real-time-data/solana

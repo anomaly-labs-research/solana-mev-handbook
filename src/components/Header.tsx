@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
+import { ModeSwitch } from "./ModeSwitch";
 
 export function Header() {
   return (
@@ -11,26 +12,29 @@ export function Header() {
             MEV<span className="text-fg-muted">.sh</span>
           </span>
         </Link>
-        <nav className="flex items-center gap-1 text-sm">
-          <Link
-            href="/docs/strategies"
-            className="rounded-md px-3 py-1.5 text-fg-muted transition hover:bg-bg-hover hover:text-fg"
-          >
-            Strategies
-          </Link>
-          <Link
-            href="/docs/state-of-solana-mev"
-            className="rounded-md px-3 py-1.5 text-fg-muted transition hover:bg-bg-hover hover:text-fg"
-          >
-            State of MEV
-          </Link>
-          <Link
-            href="/docs/solana-block-building"
-            className="hidden rounded-md px-3 py-1.5 text-fg-muted transition hover:bg-bg-hover hover:text-fg sm:block"
-          >
-            Block building
-          </Link>
-        </nav>
+        <div className="flex items-center gap-2 sm:gap-4">
+          <nav className="hidden items-center gap-1 text-sm md:flex">
+            <Link
+              href="/docs/strategies"
+              className="rounded-md px-3 py-1.5 text-fg-muted transition hover:bg-bg-hover hover:text-fg"
+            >
+              Strategies
+            </Link>
+            <Link
+              href="/docs/state-of-solana-mev"
+              className="rounded-md px-3 py-1.5 text-fg-muted transition hover:bg-bg-hover hover:text-fg"
+            >
+              State of MEV
+            </Link>
+            <Link
+              href="/docs/solana-block-building"
+              className="hidden rounded-md px-3 py-1.5 text-fg-muted transition hover:bg-bg-hover hover:text-fg lg:block"
+            >
+              Block building
+            </Link>
+          </nav>
+          <ModeSwitch />
+        </div>
       </div>
     </header>
   );

@@ -4,6 +4,28 @@ _As of Sep 2026._
 
 Just-in-time liquidity is the strategy where you are a market maker for exactly one trade. You show up with a huge amount of liquidity a moment before a large swap, take most of that swap's fee, and leave before anything else can happen to you. It sounds like a free lunch. The interesting part of the story is why, on Ethereum, it stayed a niche run by a handful of bots, and why on Solana the classic version barely exists at all.
 
+<!-- only: beginner -->
+
+## In plain terms
+
+**What it is.** On a decentralized exchange (DEX), trades are filled out of pools of tokens that ordinary people have deposited. Those depositors, the **liquidity providers** (LPs), earn a small fee on every trade. In newer "concentrated" pools an LP picks a narrow price band, and each trade's fee is split among whoever has money in that band, in proportion to how much they put there. Just-in-time (JIT) liquidity is a bot that exploits that rule: it learns a large trade is coming, drops a huge pile of money into the narrowest possible band a moment before, collects most of the fee, and pulls the money out a moment after. It is a market maker for exactly one trade.
+
+**A tiny example.** Someone is about to swap $1 million into SOL on a pool that charges 0.3 percent, so the fee is $3,000. The regular LPs have $2 million in the relevant band. A JIT bot adds $18 million and now owns 90 percent of it. The trade lands, the bot takes $2,700 of the fee, and the regular LPs get $300 instead of $3,000. The trader is actually better off: a deeper pool moves less when hit, so they save roughly $2,250 in price impact. After hedging and inventory costs the bot clears maybe $2,100, before paying to get its transactions placed.
+
+**Why it is hard.** The bot must know about the trade before it happens, and must land its deposit, the trade, and its withdrawal in exactly that order as one all-or-nothing package. It needs enormous capital for a tiny return: on Ethereum, JIT bots supplied on average 269 times the size of the trade they targeted and earned about 0.007 percent per trade. And the bot ends up holding whatever the trader sold and has to buy it back elsewhere, which on the lowest-fee pools costs more than the fee itself.
+
+**Who wins, who pays.** The trader wins a little: better price, same fee. The bot wins a little per trade and only makes real money by doing it constantly with a lot of capital. The regular LPs lose: most of the fee they were going to earn went to someone who was in the pool for a fraction of a second. On Ethereum the trade was real but tiny, under 1 percent of exchange volume, run almost entirely by one or two operators, and most of their profit went to whoever assembles blocks, because rival bots bid it away to win placement.
+
+**Why it barely exists on Solana.** The classic version depends on seeing a stranger's trade before it is finalized, which on Ethereum happens in a public waiting room called the mempool. Solana has no such waiting room: transactions go straight to the validator building the block, and the fast data feeds that exist only show a trade after its position in the block is fixed. You can react to it; you cannot get in front of it. What remains is JIT around trades you already know about because you are the app routing them, or that are predictable because a program schedules them. Large Solana swaps are also usually split across several pools by an aggregator, so each piece is too small to be worth it.
+
+**What can go wrong.** If the price moves outside the bot's narrow band mid-trade, it stops earning partway through. If the package fails to land, nothing happens, but the infrastructure was still paid for. On quiet pools, setting up the accounts costs rent that is not refunded. And if JIT became widespread, regular LPs might leave, making the pool thinner for everyone.
+
+**Terms you will meet on this page.** A **concentrated-liquidity pool** lets LPs pick a price range; **ticks** and **bins** are the units those ranges are measured in. **Price impact** is how much your own trade moves the price against you. **Hedging** means buying back what you were forced to sell. A **bundle** is a package of transactions that lands in order or not at all, with a **tip** paid to the validator. A **mempool** is a public waiting room of pending transactions; Solana does not have one. **LVR** is the money regular LPs lose to arbitrage bots when prices move. A **perp** is a futures-style contract; the "JIT auction" on the Drift (now Velocity) perps exchange borrows the name for a different, protocol-designed mechanism.
+
+**Bottom line.** JIT liquidity is a cousin of front-running that helps the trader, hurts the passive LPs, and pays the bot very little per trade. On Solana the third-party version is effectively unavailable; the forms that work live inside something you already run.
+
+<!-- /only -->
+
 ## The core idea
 
 A concentrated-liquidity AMM (Orca Whirlpools, Raydium CLMM, Uniswap v3) lets an LP choose a **price range** for their capital. Swap fees are split among the LPs whose range covers the current price, **pro rata by liquidity**. A very tight range concentrates a lot of "liquidity" (in the AMM's technical sense) from relatively little capital, because none of it is wasted on prices far from the current one.
@@ -17,6 +39,8 @@ Two things are true at the same time:
 
 ## The mechanic, step by step
 
+<!-- level: intermediate -->
+
 The bundle has three legs and the order is non-negotiable:
 
 1. **Mint before.** Open a position with lower and upper ticks as close as the pool's tick spacing allows around the current price, and deposit liquidity. In a Uniswap-style pool this means the range is one or two tick spacings wide. The swap must stay inside that range, or the JIT position stops earning partway through.
@@ -28,6 +52,8 @@ Because the JIT LP ends up on the other side of the swap (if the trader bought S
 Atomicity is what makes this a low-risk trade. If the swap does not land, the whole bundle reverts and the JIT LP never touched the pool. If it does land, the LP's inventory exposure lasts exactly as long as the bundle.
 
 ## A worked example: a $1M swap
+
+<!-- level: intermediate -->
 
 Take a $1M USDC-to-SOL swap on a pool with 0.3% fees. Passive LPs have $2M of liquidity sitting in the ticks the swap will cross. A JIT bot mints $18M concentrated into a single tick spacing around the current price, so total in-range liquidity is $20M and the JIT bot owns 90% of it.
 
@@ -61,6 +87,8 @@ There is also a theoretical ceiling on how much the trader can gain. Uniswap Lab
 
 ## Why it is a hybrid of market making and MEV
 
+<!-- level: intermediate -->
+
 JIT is **market making** in substance. You provide two-sided liquidity, earn the spread (here, the swap fee), end up with inventory, and hedge it. The P&L equation is the same one a market maker lives by: fee income minus adverse selection minus inventory cost minus operating cost.
 
 JIT is **MEV** in execution. It only works if you can see a specific pending trade and place your transactions immediately before and after it. That requires the same infrastructure as sandwiching or backrunning: private order flow visibility, atomic bundles, and a way to buy ordering from whoever builds the block. Unlike a sandwich, the target trader benefits rather than loses, but the extraction mechanism is the same.
@@ -68,6 +96,8 @@ JIT is **MEV** in execution. It only works if you can see a specific pending tra
 The cleanest way to say it: a passive LP is a market maker whose hands are tied and who quotes for everyone. A JIT LP is a market maker who untied their hands and quotes for exactly one counterparty they have already inspected.
 
 ## The adverse-selection puzzle
+
+<!-- level: intermediate -->
 
 Passive LPs bleed **loss-versus-rebalancing (LVR)**: they quote stale prices and get picked off by arbitrageurs every time the market moves. The market-making doc covers this in detail. A JIT LP faces almost none of it. It is in the pool for a single trade whose size and direction it already knows, it is never left holding a stale quote, and it can hedge within seconds.
 
@@ -82,6 +112,8 @@ So why do JIT LPs not simply replace passive LPs entirely? Several reasons, all 
 The result is not "JIT dominates" but "JIT skims the largest trades while passive LPs subsidize the pool's baseline depth." That is an uneasy equilibrium and it is the reason protocols started designing against it.
 
 ## What actually happened on Ethereum
+
+<!-- level: intermediate -->
 
 JIT appeared on Uniswap v3 in 2021, enabled by Flashbots bundles that let a searcher submit mint, target swap, and burn as one atomic unit to a block builder. The headline numbers from the two main empirical studies:
 
@@ -111,6 +143,8 @@ The MEV-Boost era did not change the picture much. JIT remained a specialist tra
 
 ## Solana: the venues
 
+<!-- level: intermediate -->
+
 All three major Solana concentrated-liquidity venues can technically host the trade, but they differ in shape.
 
 | Venue | Model | Fee tiers | Position granularity | JIT-relevant quirks |
@@ -123,11 +157,13 @@ On Meteora, "mint a tight range" means "deposit into the active bin and maybe on
 
 ## Solana: there is no mempool, and that changes everything
 
+<!-- level: intermediate -->
+
 On Ethereum, JIT works because the target swap sits in a public mempool where anyone can read it and wrap it. Solana never had a native in-protocol mempool. Transactions go straight to the upcoming leader. Jito ran a pseudo-mempool that held transactions for about 200 ms so searchers could bid on them, and that is what enabled sandwiches and classic JIT for a while. **Jito shut that mempool down on March 8, 2024.**
 
 Since then, the earliest a third party can see someone else's swap is after the leader has already sequenced it:
 
-- **Shreds and ShredStream.** Shreds are the leader's block data being broadcast. ShredStream delivers them directly from Jito-connected validators, saving on the order of 50–200 ms versus waiting for normal propagation (unverified figure from a secondary source). By definition, a shred contains transactions that are already ordered. You can react to a swap, you cannot get in front of it.
+- **Shreds and shred feeds.** Shreds are the leader's block data being broadcast. Jito ShredStream delivered them directly from Jito-connected validators, saving on the order of 50–200 ms versus waiting for normal propagation (unverified figure from a secondary source), until Jito shut it down on September 5, 2026 and pointed users to DoubleZero Edge, a paid private-fiber shred feed. By definition, a shred contains transactions that are already ordered. You can react to a swap, you cannot get in front of it.
 - **BAM (Block Assembly Marketplace).** Launched on mainnet in September 2025, BAM moves sequencing into trusted execution environments. Transactions are encrypted inside the enclave until execution, which is designed specifically to stop frontrunning and sandwiching. Applications can write **plugins** that define ordering rules for their own transactions, and Jito's own framing is that this enables "protected backrunning": a searcher can append a transaction after a user's swap, not before it.
 - **BAM preconfirmations.** Launched September 9, 2026, covering 34.1% of stake across 383 of 665 validators at launch, distributed by Helius and Triton One. Preconfs stream a signal after the validator has scheduled a transaction but before it is packed into shreds, about 5–10 ms ahead of shred-based signals at the median. Still post-scheduling; still a signal, not a guarantee.
 
@@ -140,6 +176,8 @@ What remains possible:
 - **Application-level opt-in via BAM plugins.** A DEX could in principle write a plugin that invites makers to add liquidity before its own swaps land inside the enclave. Nothing like that has shipped for AMM liquidity as far as public information shows (unverified).
 
 ## Solana: bundles, rent, compute, and tick arrays
+
+<!-- level: expert -->
 
 If you do have a swap to wrap, the mechanics are Jito bundles. A bundle holds at most 5 transactions, executes sequentially and atomically within a single slot, and is auctioned roughly every 50 ms on tip per compute unit. Minimum tip is 1,000 lamports; in practice the tip is the competitive variable. The JIT layout is fixed:
 
@@ -156,11 +194,15 @@ Some of the friction is Solana-specific:
 
 ## Solana: aggregators split the swap
 
+<!-- level: intermediate -->
+
 The other reason a single $1M swap is rarer than it looks on Solana is **Jupiter**. Its routing engine (Metis) splits large orders across multiple pools and DEXs, including multi-hop routes through SOL or USDC and multiple splits through the same DEX at different pools. A $1M order might land as 60% on an Orca Whirlpool, 25% on a Raydium pool, and 15% on a Phoenix order book. From a JIT LP's perspective, that is three smaller swaps on three venues, each below the size threshold where the fixed costs pay off, and only the CLMM legs are JIT-able at all.
 
 This is not accidental. Splitting is exactly what a trader would do to minimize impact without needing a JIT LP to show up, and it eats the same inefficiency JIT was monetizing.
 
 ## Related but different: JIT auctions on perps
+
+<!-- level: intermediate -->
 
 Drift Protocol (rebranded Velocity in July 2026 after its April 2026 exploit) pioneered a different mechanism that also carries the JIT name. When a taker submits a market order, the protocol opens a short **Dutch auction**, originally about 5 seconds, in which the fill price ramps from the taker's best price toward their limit. Makers watch the auction and fill it with a place-and-make instruction: an immediate-or-cancel, post-only order that exists only to fill this one taker, executes, and cancels the remainder in a single transaction. The venue's own AMM competes alongside makers and backstops whatever is left. Makers earn a flat maker rebate (0.25 bps of filled notional in the current Velocity docs) and a partially filled JIT order cannot be pulled.
 
@@ -183,6 +225,8 @@ The honest answer is "both, depending on which side of the pool you sit on."
 The empirical resolution on Ethereum was that JIT stayed under 1% of volume, so the harm was contained by JIT's own economics more than by any protocol design. Whether that would hold if the trade became cheap and widespread is the open question the protocol responses are trying to preempt.
 
 ## Protocol responses
+
+<!-- level: intermediate -->
 
 - **Uniswap v4 hooks.** v4 exposes callbacks before and after liquidity is added or removed, and pools can charge dynamic fees. OpenZeppelin's `LiquidityPenaltyHook` is the reference anti-JIT design: if liquidity is added and removed within a configurable block window, the LP's fees are withheld and donated to the in-range LPs that stayed. A 2026 Trail of Bits review found a bypass in one implementation (collect fees via a tiny add before the penalized remove), which is a reminder that the enforcement point matters. v4 also lets a pool internalize JIT as a hook that adds and removes liquidity around its own swaps, turning the strategy into a protocol feature rather than a third-party extraction.
 - **Dynamic fees.** Meteora's DLMM variable fee rises with volatility (bin crossings), and Orca has adaptive-fee pools. These do not target JIT directly, but they raise the fee on exactly the large, price-moving swaps JIT wants, which increases the JIT LP's gross and the passive LP's loss in equal proportion; they are neutral-to-favorable for JIT, not a deterrent.
@@ -207,6 +251,8 @@ Bottom line: on Solana, JIT as a standalone MEV strategy is a paper trade. JIT a
 
 ## How this connects to the rest of the stack
 
+<!-- level: intermediate -->
+
 - **Backrunning arb** is JIT's mirror image. Backrunning reacts to a swap after it lands and captures the price displacement it caused. JIT gets ahead of the same swap and captures the fee while *reducing* the displacement. On Solana the detection pipeline is identical (shreds, preconfs, BAM signals), but only the backrun is executable against third-party flow. If you can predict a swap well enough to JIT it, you can usually also backrun it, and the two are not mutually exclusive in one bundle.
 - **Market making** supplies the P&L model. A JIT position is a two-sided quote for one counterparty. The fee is the spread, the inventory you end up holding is exactly the adverse-selection cost, and the CEX hedge is the same hedge a market maker runs continuously. The difference is that JIT knows its counterparty's size and direction in advance, which is the market maker's dream and the reason the strategy is so capital-efficient per unit of risk.
 - **Concentrated-liquidity LP-ing** is the baseline JIT competes with. Everything in this doc about dilution is a cost to the passive strategy. If the stack runs passive CLMM positions anywhere, knowing which pools and swap sizes attract JIT is a direct input to where those positions are profitable.
@@ -224,6 +270,7 @@ Bottom line: on Solana, JIT as a standalone MEV strategy is a paper trade. JIT a
 - Helius, "Solana MEV: An Introduction" (Jito mempool shutdown, bundle basics): https://www.helius.dev/blog/solana-mev-an-introduction
 - Jito docs, low-latency transaction send / bundles (5-tx limit, atomicity, tips, 50 ms auction): https://docs.jito.wtf/lowlatencytxnsend/
 - Jito Labs, ShredStream proxy: https://github.com/jito-labs/shredstream-proxy
+- Jito docs, ShredStream (September 5, 2026 shutdown notice, DoubleZero Edge migration): https://docs.jito.wtf/lowlatencytxnfeed/
 - Helius, "Block Assembly Marketplace (BAM)": https://www.helius.dev/blog/block-assembly-marketplace-bam
 - Pine Analytics, "An Introduction to Jito's Block Assembly Marketplace": https://pineanalytics.substack.com/p/bam-and-the-future-of-solana-defi
 - Solana Compass, "Jito BAM Preconfirmations Go Live" (Sep 9, 2026): https://solanacompass.com/news/jito-bam-preconfirmations-go-live-on-solana-covering-34-of-network-stake
@@ -234,6 +281,7 @@ Bottom line: on Solana, JIT as a standalone MEV strategy is a paper trade. JIT a
 - Meteora, "DLMM: New dynamic liquidity protocol to boost LP fees on Solana": https://meteoraag.medium.com/dlmm-new-dynamic-liquidity-protocol-to-boost-lp-fees-on-solana-84867bad0907
 - Drift, "Just-in-Time (JIT) Liquidity Mechanism": https://www.drift.trade/updates/jit-liquidity-mechanism
 - Velocity (formerly Drift) docs, JIT auctions for market makers: https://docs.velocity.exchange/developers/market-makers/jit-auctions
+- Velocity docs, Rewards (0.25 bps flat maker rebate): https://docs.velocity.exchange/protocol/rewards
 - The Defiant, "Drift Protocol Rebrands to Velocity DEX Ahead of Relaunch": https://thedefiant.io/news/defi/drift-protocol-rebrands-to-velocity-dex-ahead-of-relaunch
 - Trail of Bits, "Building secure Uniswap v4 hooks" (LiquidityPenaltyHook bypass): https://blog.trailofbits.com/2026/07/30/building-secure-uniswap-v4-hooks/
 - Uniswap hooklist, LiquidityPenaltyHook entry: https://github.com/Uniswap/hooklist/pull/5739

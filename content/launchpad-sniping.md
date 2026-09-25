@@ -4,6 +4,26 @@ _As of Sep 2026._
 
 Launchpad sniping is the purest latency game on Solana: the whole edge is being the first buyer on a brand-new bonding curve, before anyone else has moved the price. It is also the strategy where the counterparty is most often the person who created the token. Understanding both facts is the difference between a strategy and a donation.
 
+<!-- only: beginner -->
+
+## In plain terms
+
+**What it is.** A **launchpad** is a website where anyone can create a new token for free in a few seconds, with no money behind it. Instead of an exchange with buyers and sellers, the launchpad sells the token on a **bonding curve**: a fixed formula that raises the price a little with every purchase and lowers it with every sale. Because the formula is public and never changes, the very first buyer always gets the lowest price anyone will ever pay. **Sniping** means being that first buyer, in the same fraction of a second the token is created, and then selling to whoever shows up after you. You are buying the cheapest ticket and hoping a queue forms behind you.
+
+**A tiny example.** On pump.fun, the biggest launchpad, the first buyer who puts in 1 SOL gets about 34 million tokens, roughly 3.4% of the whole supply. If other people then buy 20 SOL worth and you sell everything, you get back about 2.6 SOL: a profit of about 1.6 SOL. If nobody comes and you sell straight away, you get back about 0.98 SOL, so you need about 0.4 SOL of other people's buying just to break even. In the rare case the token "graduates" (attracts about 85 SOL and moves to a normal exchange), your 1 SOL becomes about 12 SOL. That happens on well under one launch in a hundred. And if the token's creator bought 5 SOL just ahead of you in the same instant, the same 20 SOL of follow-on buying leaves you with about 1.5 SOL instead of 2.6, because they sell first and you sell into a lower price.
+
+**Why it is hard.** The whole edge is being first, and everyone knows it. By 2025 more than half of all new pump.fun tokens were already being bought in the same **slot** (Solana's block interval, about a quarter of a second) they were created in. To be first you need to see the creation before it is confirmed, send your buy through a paid fast lane with a **tip** attached, and beat hundreds of other bots. Even then, the person most often in front of you is the token's creator, who can guarantee their own wallets buy first.
+
+**Who wins, who pays.** The best public data is on insiders: snipers whose wallets were funded by the token's own creator made money on 87% of their snipes and took out more than 15,000 SOL in a single month. Nobody has published comparable numbers for independent snipers, and the structure explains why: the insiders' profit comes from whoever buys after them, and the fastest outsider is first in that queue. Across all pump.fun traders, fewer than half of the wallets that sold made any money in most months of 2024 and 2025.
+
+**What can go wrong.** Nearly every launch fails: about 99% never graduate and about 92% see at least one sharp dump. Many launches are set up from the start so the creator holds a large slice through disguised wallets and sells into the first buyers. On some launchpads the token itself can be a trap (the creator can freeze your account or block sales). And when many snipers use the same signal, they all try to sell at the same moment, to each other.
+
+**Terms you will meet on this page.** A **bonding curve** is the price formula described above. **Graduation** or **migration** is when a token has attracted enough buying that its money moves into a normal exchange pool. A **bundle** is a small package of transactions that lands together in one slot, and a **tip** is the payment attached to it. A **bundled launch** is when a creator packs their own buys into the creation itself. A **dev wallet** is the creator's wallet, and a **bundler** is a set of wallets a creator uses to hide how much they hold. A **rug pull** is when the creator drains the token's liquidity. **Shreds** are pieces of a block streamed out before it is finished, the fastest way to see a new token.
+
+**Bottom line.** Sniping is a latency race where the prize is fixed by arithmetic and the person ahead of you is often the person who made the token. Buying every launch loses money once tips are counted; the only version that can work is a fast operation with a strict filter for which launches to touch, and it sits right next to market manipulation, so clean wallet provenance is not optional.
+
+<!-- /only -->
+
 ## The core idea
 
 A **launchpad** lets anyone create a token for free and immediately sells it on a **bonding curve**: a deterministic price schedule where every buy pushes the price up and every sell pushes it down. There is no order book, no LP to seed, and no liquidity at all beyond what buyers put in.
@@ -13,6 +33,8 @@ Because the curve is deterministic, the first buyer always gets the lowest price
 The intuition: you are not predicting which meme wins. You are buying a ticket at the guaranteed-lowest price and selling it a few seconds later to whoever shows up. The strategy lives or dies on (a) how often anyone shows up, and (b) whether the creator was already standing in front of you.
 
 ## How a bonding-curve launchpad works: pump.fun
+
+<!-- level: intermediate -->
 
 Pump.fun's curve is a **constant-product AMM with virtual reserves**: the same `x * y = k` as Uniswap V2, except the SOL side starts with a fictional 30 SOL that nobody deposited. The virtual SOL gives the curve a starting price greater than zero; the real SOL is what buyers actually pay in.
 
@@ -35,12 +57,14 @@ The remaining ~207M tokens (1B − 793.1M) are held back and, together with the 
 
 ### Worked example: first buyer, then sell after N SOL of inflow
 
+<!-- level: expert -->
+
 You land the very first buy of 1 SOL in the creation slot.
 
 - Fee: 1.25% → 0.9875 SOL reaches the curve. New `vSOL` = 30.9875.
 - New virtual tokens = k / 30.9875 = 1,038.81M. You receive 1,073M − 1,038.81M = **34.19M tokens** (3.42% of supply) at an average 2.89 × 10^-8 SOL each.
 
-Case A: **20 SOL of organic buying follows** (gross, fees included). `vSOL` rises to 50.74; spot price is 2.68x your entry. You sell all 34.19M tokens: reserves go back to k / (631.3M + 34.19M) = 48.37 SOL, so you receive 2.59 SOL gross, **2.56 SOL net of fee**. Profit **+1.56 SOL** on 1 SOL. Notice you do not capture the 2.68x spot move; your own sell walks the price back down.
+Case A: **20 SOL of organic buying follows** (gross, fees included). `vSOL` rises to 50.74; spot price is 2.68x your entry. You sell all 34.19M tokens: reserves go back to k / (634.4M + 34.19M) = 48.14 SOL, so you receive 2.59 SOL gross, **2.56 SOL net of fee**. Profit **+1.56 SOL** on 1 SOL. Notice you do not capture the 2.68x spot move; your own sell walks the price back down.
 
 Case B: **the token graduates** (85 SOL total in). Selling 34.19M tokens at `vSOL = 115` returns **12.36 SOL**, about 12.4x. This is the outcome every sniper is underwriting, and it happens on well under 1% of launches (see below).
 
@@ -50,18 +74,22 @@ Case D: **a bundler was in front of you.** The creator's own wallets bought 5 SO
 
 ## Graduation and migration
 
+<!-- level: intermediate -->
+
 When the curve completes, pump.fun atomically closes the curve and moves the SOL and remaining tokens into a **PumpSwap** pool (its own AMM, launched March 2025 to stop paying Raydium's migration fee). LP tokens are burned, so the pool liquidity is permanent. PumpSwap canonical pools charge a fee that steps down with market cap, from 1.25% total at the bottom tier (0.30% creator, 0.93% protocol, 0.02% LP) to 0.30% at the top tier (0.05% / 0.05% / 0.20%). Creator fees are collected into a vault the creator can claim, which is the legitimate revenue model for launching a token, and also the reason many creators launch dozens of tokens a day.
 
 The migration itself is a second sniping opportunity, covered below.
 
 ## The other launchpads
 
+<!-- level: intermediate -->
+
 Most of the 2025–2026 "launchpad wars" were fought on two underlying programs. **Raydium LaunchLab** and **Meteora's Dynamic Bonding Curve (DBC)** are permissionless curve programs; brands like Bonk.fun, Believe and Jupiter Studio are mostly *config accounts* inside one of those programs rather than separate contracts. This matters for a sniper: one decoder covers many front-ends.
 
 | Launchpad | Underlying program | Curve | Default graduation | Notable for snipers |
 |---|---|---|---|---|
 | pump.fun | own program | constant product, virtual reserves | ~85 SOL in, ~411 SOL cap | Largest volume; standard SPL mint; migrates to PumpSwap |
-| Raydium LaunchLab / Bonk.fun (LetsBonk) | LaunchLab | linear, exponential or logarithmic; "JustSendit" preset | 85 SOL (customizable) | 1% curve fee; since Aug 2025 all launches migrate to CPMM with LP burned/locked; Bonk.fun routes 30% of revenue to BONK buybacks and briefly held ~82% of curve volume in July 2025 |
+| Raydium LaunchLab / Bonk.fun (LetsBonk) | LaunchLab | constant product (default), fixed-price or linear-price in the current docs (launched in April 2025 with linear, exponential and logarithmic options); "JustSendit" preset | 85 SOL (customizable) | 1% curve fee; since 17 Aug 2026 all new launches migrate to CPMM with LP locked/burned (AMM v4 was an option before); Bonk.fun routes 30% of revenue to BONK buybacks and briefly held ~82% of curve volume in July 2025 |
 | Believe, Jupiter Studio, others | Meteora DBC | multi-segment configurable curve | configurable (Believe: ~$100k cap; Jup Studio default 85 SOL) | **Fee scheduler**: launch fee starts very high and decays over time, explicitly to tax snipers; **rate limiter** raises fee with trade size; migrates to DAMM v1/v2 |
 | Boop.fun | own program | bonding curve on 75% of supply | ~400 SOL bonded (unverified) | Much higher threshold; 5% of supply to BOOP stakers; low graduation counts |
 | Moonshot (DEX Screener) | own program | quadratic: slow start, steep end | ~431 SOL cap when 80% sold | Mobile/fiat on-ramp audience; migrates to Meteora or Raydium |
@@ -70,11 +98,15 @@ The differences that actually change a sniper's math: the **curve shape** (a lin
 
 ## What "sniping" means, precisely
 
-A snipe is a buy that lands **in the same slot as the create instruction**, ideally in the transaction immediately following it. Solana slots are ~300 ms (400 ms until August 2026) and a leader packs many transactions per slot, so "same slot" is a queue with hundreds of entrants. Being in the slot is not enough; **position within the slot** is what set the 26% haircut in Case D. Everyone who buys in slot 0 pays a price that depends only on who was ahead of them.
+<!-- level: intermediate -->
+
+A snipe is a buy that lands **in the same slot as the create instruction**, ideally in the transaction immediately following it. Solana slots are ~250 ms since 18 September 2026 (400 ms until August 2026, stepped down through 350 and 300 ms) and a leader packs many transactions per slot, so "same slot" is a queue with hundreds of entrants. Being in the slot is not enough; **position within the slot** is what set the 26% haircut in Case D. Everyone who buys in slot 0 pays a price that depends only on who was ahead of them.
 
 Pine Analytics found that by spring 2025 **over half of pump.fun tokens were bought in the exact slot they were created**. Same-slot entry stopped being an edge and became table stakes; the edge moved to *which* tokens to snipe and *how far forward* in the slot you land.
 
 ## The sub-strategies
+
+<!-- level: intermediate -->
 
 **Same-slot creation sniping.** The baseline described above. Pure latency plus a filter. The filter matters more than the speed: sniping every launch is a guaranteed loss because most curves never see 0.4 SOL of follow-on buying.
 
@@ -87,6 +119,8 @@ Pine Analytics found that by spring 2025 **over half of pump.fun tokens were bou
 **Volume and social filters.** Slower snipes (seconds to minutes in) that wait for confirmation: unique-buyer count, buy/sell ratio, velocity of SOL inflow, a matching X post from a real account, a livestream. The arXiv study found **trading velocity** (reaching a SOL threshold in few trades) was the single strongest predictor of graduation, and that tokens with a non-bot trade share above 0.7 graduated markedly more often. You give up the slot-0 price for a much better base rate.
 
 ## Execution mechanics: why latency matters here more than almost anywhere
+
+<!-- level: expert -->
 
 In most arbs, being 200 ms late costs you a fraction of a spread. In sniping, being 200 ms late means you are not in slot 0 at all; you are buying from the people who were.
 
@@ -109,6 +143,8 @@ In most arbs, being 200 ms late costs you a fraction of a spread. In sniping, be
 
 Start with the base rates.
 
+<!-- level: intermediate -->
+
 | Metric | Figure | Source |
 |---|---|---|
 | pump.fun lifetime graduation rate | ~1.4% | Dune (jondar) |
@@ -120,13 +156,19 @@ Start with the base rates.
 | Launches classified high-risk (>70% drop within 20 min of migration, or manipulative pattern) | 84.1% of 41,470 | MemeTrans |
 | Tokens with at least one dump event | 92.2% of 184,282 | arXiv 2602.14860 |
 
+<!-- /level -->
+
 Solidus' 98.6% is worth reading correctly: pump.fun pushed back that "below $1k liquidity" measures collapse, not proven fraud. Both are true. Nearly everything goes to zero; a large fraction of that is deliberate.
 
 Now the snipers themselves. Pine Analytics' **deployer-funded** same-slot snipers (wallets with a direct SOL transfer from the token's creator) were profitable on **87%** of snipes, extracted **15,000+ SOL in one month** across 15,000+ launches, exited **55% of positions within 60 seconds** and 85% within five minutes, usually in one or two sells. That is the profitability of *insiders*. Nobody has published comparable win rates for independent snipers, and the structure of the game says why: the insider's 87% is funded by whoever bought after them, and the fastest outside buyer is the first person in that queue.
 
 For the broad trader population, CoinGecko's realised-PnL series is the best public data: fewer than half of pump.fun wallets that closed positions were profitable in most months of 2024–2025 (low of 30.1% in June 2025), then a sharp rise to 73.3% in April 2026 — driven, they argue, by unprofitable traders leaving (active wallets fell from 5.2M to 1.8M) rather than by the game getting easier. Even in that best month, 65% of all wallets made between $1 and $500, and the series excludes anyone still holding.
 
+<!-- level: intermediate -->
+
 A rough expected-value sketch for an unfiltered slot-0 sniper with 1 SOL per launch, using Cases A–C: if 1% of launches hit Case B (+11.4 SOL), 10% hit something like Case A (+1.5 SOL), and 89% hit Case C or worse (−0.05 to −0.5 SOL), EV per launch is about 0.114 + 0.15 − 0.25 ≈ **+0.01 SOL before tips**. A 0.01 SOL tip erases it, and a bundler in front of you (Case D) turns every winning branch smaller. Unfiltered sniping is negative EV; the whole job is the filter.
+
+<!-- /level -->
 
 ## Risks
 
@@ -137,6 +179,8 @@ A rough expected-value sketch for an unfiltered slot-0 sniper with 1 SOL per lau
 **The arms race.** Your latency edge decays monthly. Infrastructure that put you first in Q1 puts you fifth in Q3, and fifth is Case D.
 
 **Exit-liquidity dynamics.** Every sniper's exit is the next buyer's entry. The arXiv study noted that selling *before* graduation returns more SOL per token than selling just after (virtual liquidity is thinner than the real pool), so rational early holders dump pre-graduation, which is why so many tokens stall at 60–80 SOL. When snipers all use the same signal, they all exit at the same moment, into each other.
+
+<!-- level: intermediate -->
 
 **Operational.** Bundles that land partially (never, if built correctly), stale blockhashes, block-engine rate limits (default 1 request per second per IP per region), and the infra churn shown by ShredStream's shutdown.
 
@@ -163,6 +207,8 @@ The honest framing for a trading desk: independent sniping is speculation with a
 
 ## How this connects to the rest of the stack
 
+<!-- level: intermediate -->
+
 Sniping reuses almost everything the arb and liquidation infrastructure already needs, which is the main argument for a team to run it at all:
 
 - **Shred-level detection** is the same feed used to see a DEX swap or an oracle update before the block is final. A sniper decodes create/migrate instructions; an arb decodes swaps. Same pipeline, different filter, and the ShredStream-to-DoubleZero migration hits both.
@@ -172,6 +218,8 @@ Sniping reuses almost everything the arb and liquidation infrastructure already 
 - **The MEV framing is the same**: in arb you are the informed taker collecting LVR from passive LPs; in sniping you are trying to be the informed taker against later buyers, while the creator is trying to be it against you. Adverse selection did not go away, it just moved to slot 0.
 
 ## Where to go next
+
+<!-- level: expert -->
 
 - **Program-level decoders for pump.fun, LaunchLab and DBC** — the three account layouts cover most of the market.
 - **Deployer scoring** — a persistent graph of deployer wallets, funding sources and past outcomes is the filter that turns the EV positive.
@@ -183,11 +231,11 @@ Sniping reuses almost everything the arb and liquidation infrastructure already 
 - Pump.fun, "Pump.fun fees" (updated 20 May 2026) — https://pump.fun/docs/fees
 - pump-fun/pump-public-docs, PUMP_PROGRAM_README.md (program constants) — https://github.com/pump-fun/pump-public-docs/blob/main/docs/PUMP_PROGRAM_README.md
 - The Block, "Pump.fun launches DEX called PumpSwap" — https://www.theblock.co/post/347360/pump-fun-launches-dex-called-pumpswap-to-instantly-migrate-graduated-tokens
-- Raydium Docs, LaunchLab — https://docs.raydium.io/products/launchlab
+- Raydium Docs, LaunchLab — https://docs.raydium.io/products/launchlab and bonding-curve page (curve shapes, fee split, CPMM-only migration) — https://docs.raydium.io/products/launchlab/bonding-curve
 - Messari, "State of Raydium Q2 2025: LaunchLab Emerges" — https://messari.io/report/state-of-raydium-q2-2025
 - Solana Compass, "Raydium LaunchLab mandates CPMM-only graduation and locks creator LP" — https://solanacompass.com/news/raydium-launchlab-mandates-cpmm-only-graduation-and-locks-creator-lp-at-token-migration
 - blocmates, "Launchpad wars: which Solana launchpad will win" — https://www.blocmates.com/articles/all-you-need-to-know-about-the-solana-launchpad-wars
-- Meteora Docs, DBC bonding curve configs (fee scheduler, rate limiter) — https://docs.meteora.ag/developer-guide/guides/dbc/bonding-curve-configs
+- Meteora Docs, Anti-Sniper Suite: Fee Scheduler and Rate Limiter (DBC max fee 99%) — https://docs.meteora.ag/anti-sniper-suite/fee-scheduler/what-is-fee-scheduler
 - Moonshot Docs, "Bonding Curve - Solana" — https://docs.moonshot.cc/developers/bonding-curve-solana
 - Solana Compass, Boop project page — https://solanacompass.com/projects/boop
 - stepdata, "Letsbonk claims 82% of bonding curve volume" — https://stepdata.substack.com/p/letsbonk-claims-82-of-bonding-curve
@@ -204,5 +252,6 @@ Sniping reuses almost everything the arb and liquidation infrastructure already 
 - Jito Docs, Low Latency Transaction Send (bundles, tips, auction) — https://docs.jito.wtf/lowlatencytxnsend/
 - Solana Compass, "DoubleZero removes unauthorized retransmitters, claims 70%+ leader shred lead" — https://solanacompass.com/news/doublezero-removes-unauthorized-shred-retransmitters-claims-70-plus-lead-over-all-competitors
 - RPC Fast, "Jito Explained: Bundles, Tips & Solana MEV in 2026" — https://rpcfast.com/blog/jito-explained-bundles-tips-mev-solana
+- Solana Compass, "Solana activates 250ms slot time at epoch 1037" (18 Sep 2026; slot-time sequence) — https://solanacompass.com/news/solana-activates-250ms-slot-time-at-epoch-1037-fourth-step-of-simd-0525
 - DEV Community, "Freeze authority is the Solana honeypot" (Token-2022 extension checklist) — https://dev.to/mrvlyouknowwho/freeze-authority-is-the-solana-honeypot-how-to-check-any-spl-token-in-10-seconds-free-no-wallet-15h4
 - WilmerHale, "The State of Meme Coin Regulation: SEC Staff's Statement" — https://www.wilmerhale.com/en/insights/client-alerts/20250313-the-state-of-meme-coin-regulation-sec-staffs-statement-and-other-considerations

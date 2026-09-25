@@ -17,6 +17,7 @@ export function Toc({ entries }: { entries: TocEntry[] }) {
       const line = 96; // px from top; matches scroll-padding-top
       let current = headings[0].id;
       for (const h of headings) {
+        if (h.getClientRects().length === 0) continue; // folded away by the reading mode
         if (h.getBoundingClientRect().top - line <= 0) current = h.id;
         else break;
       }
@@ -34,7 +35,13 @@ export function Toc({ entries }: { entries: TocEntry[] }) {
         On this page
       </p>
       {entries.map((e) => (
-        <a key={e.id} href={`#${e.id}`} data-depth={e.depth} data-active={active === e.id}>
+        <a
+          key={e.id}
+          href={`#${e.id}`}
+          data-depth={e.depth}
+          data-active={active === e.id}
+          data-modes={e.modes.join(" ")}
+        >
           {e.text}
         </a>
       ))}

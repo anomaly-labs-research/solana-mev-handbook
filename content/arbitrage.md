@@ -4,6 +4,37 @@ _As of Sep 2026._
 
 Arbitrage is the simplest trade to describe and the most crowded trade in crypto: the same asset is priced differently in two places, so you buy where it's cheap and sell where it's expensive. On Solana most of it happens inside a single transaction, which changes the risk profile completely and turns the whole game into a latency-and-fees contest.
 
+<!-- only: beginner -->
+
+## In plain terms
+
+**What it is.** The same token has two prices in two places. Buy where it is cheap, sell where it is dear, keep the difference. On Solana the "places" are decentralized exchanges (DEXs): pools of tokens that anyone can trade against, with a price set by a formula rather than by a person. When one pool says SOL is worth $100 and another says $102, that $2 gap is the whole opportunity.
+
+**The trick that makes it safe.** On a blockchain you can put both steps, the buy and the sell, inside one transaction and add a rule: cancel everything unless I finish with more money than I started with. So either you make money or nothing happens. This all-or-nothing property is called being **atomic**, and it is why arbitrage is the one trade in this handbook with almost no risk on the trade itself.
+
+**A tiny example.** Two pools each hold about $1 million. One prices SOL at $100, the other at $102. Buying about $3,700 of SOL from the cheap pool and selling it into the dear one nets roughly $28 after fees. Not $74, because every dollar you buy pushes the cheap pool's price up and every dollar you sell pushes the dear pool's price down, and both pools charge a fee. Real Solana arbs are mostly smaller than this: the average winning one earns about $1.58.
+
+**Why gaps exist at all.** Someone makes a big trade on one exchange because that is where their wallet sent them, and that trade pushes the exchange's price while the others sit still. Or the price moves on a big centralized exchange like Binance and the on-chain pools have not caught up yet. Either way the gap sits there until the fastest bot takes it, which on Solana means within a fraction of a second.
+
+**Why it is hard.** Everyone knows the trick. Thousands of bots watch every pool. To win you have to notice the gap first (a matter of milliseconds), and then win a bidding contest to have your transaction placed before your rivals'. That bid is a **tip** paid to the validator that builds the block, and winning bots now hand over half or more of their profit in tips. Most attempts fail outright, and the servers and data feeds needed to compete cost thousands of dollars a month. The result is that most arbitrage bots lose money once you count the hardware, and a handful of well-funded teams take most of the profit.
+
+**Who pays.** The people who deposited tokens into the pools, called **liquidity providers** or LPs, are the ones on the other side. They sold at a stale price, so the arbitrageur's profit is their loss. This is a known, measurable cost of being an LP, and the trading fees they earn are meant to compensate for it.
+
+**Four versions of the same idea.**
+
+- **Cross-DEX:** buy on one exchange, sell on another.
+- **Cyclic:** trade through a loop of three or more tokens (SOL to USDC to JUP and back to SOL) and end with more than you started.
+- **CEX-DEX:** one leg on a centralized exchange, one on-chain. Bigger gaps, but not atomic, so real risk.
+- **Backrunning:** watch for a big swap that creates a gap and land your trade right behind it, in the same block. This is the dominant form on Solana today.
+
+**What it is not.** Arbitrage reacts to a price move after it happened. **Sandwiching** is different: seeing a user's trade before it lands and trading around it so the user gets a worse price. That takes value straight from the user, and the systems that assemble Solana blocks now refuse to carry it.
+
+**Terms you will meet on this page.** A **slot** is Solana's block interval, a few hundred milliseconds. A **validator** is a computer that produces blocks. A **Jito bundle** is a small package of transactions that lands in order or not at all, with a tip attached. **Priority fee** is the other way to pay for placement. A **mempool** is a waiting room of pending transactions; Solana does not have a public one. **LVR** (loss-versus-rebalancing) is the name for what LPs lose to arbitrageurs.
+
+**Bottom line.** Arbitrage is the simplest strategy to describe and the most competitive one to run. It is an infrastructure business, not a trading idea, and understanding it explains most of the rest of this handbook, because liquidations, JIT liquidity and market making all reuse its machinery.
+
+<!-- /only -->
+
 ## The core idea
 
 Two pools both quote SOL/USDC. Orca says $100, Raydium says $102. You spend USDC to buy SOL on Orca and immediately sell that SOL on Raydium for more USDC than you started with. You never hold SOL, you never took a view on where SOL is going, and you ended with more of the same asset you began with.
@@ -13,6 +44,8 @@ That last part matters. The **profit is measured in the input token** (you start
 Your profit per opportunity is roughly: **price gap, minus fees on both legs, minus the price impact your own trade causes, minus what you pay to land it.** Everything else in this document is about the pieces of that sentence.
 
 ## The four flavors
+
+<!-- level: intermediate -->
 
 **Cross-DEX spread arbitrage.** Two venues quote one pair at different prices. Buy at the low venue, sell at the high one. The most common Solana version, per Umbra Research's early study, was picking off an AMM with stale quotes and hedging on an on-chain order book (Phoenix) whose market makers had already moved. Today the "already moved" venue is more often a proprietary AMM (more below).
 
@@ -26,10 +59,14 @@ Liquidations, incidentally, are a backrun of an oracle update rather than of a s
 
 ## Where the spread comes from
 
+<!-- level: intermediate -->
+
 Nobody leaves free money on the table on purpose. Gaps exist because of two things:
 
 - **Uninformed flow.** A retail user swaps $200k of SOL on one pool because that's where their wallet routed them. Their trade pushes that pool's price 1 percent away from every other venue. They didn't care about the cross-venue price; they just wanted SOL. That 1 percent is now sitting in the pool for whoever takes it first.
 - **Stale AMM prices.** An `x * y = k` pool only changes price when someone trades against it. If SOL moves 2 percent on Binance in 400ms, the pool still quotes the old price until an arbitrageur shows up and trades it back to fair. The pool's LPs sold SOL at the old price to the arb.
+
+<!-- level: expert -->
 
 The second one has a name. **LVR (loss-versus-rebalancing)**, from Milionis, Moallemi, Roughgarden and Zhang (2022), measures how much an AMM LP loses relative to holding the same position but rebalancing at true market prices. Its central result: **LVR is exactly the arbitrageurs' best-case profit against that pool.** Every dollar an LP bleeds to stale pricing is a dollar the arb collected. Arb profit and LVR are the same number seen from opposite sides of the trade.
 
@@ -37,11 +74,17 @@ For a constant-product pool the instantaneous LVR rate is **sigma squared over 8
 
 Fees shrink the pie. Milionis et al.'s follow-up on fees shows that with a fee of `f`, no arb happens until the market price drifts outside the band `[(1-f) P_pool, P_pool / (1-f)]`, and the arb only pushes the pool back to the edge of that band, not the center. Higher fees mean fewer, larger arbs and more of the volatility captured by LPs rather than searchers.
 
+<!-- /level -->
+
 ## How fees and price impact cap your size
+
+<!-- level: intermediate -->
 
 The gap between two pools isn't a price you can trade unlimited size at. Every unit you buy from the cheap pool raises its price; every unit you sell to the expensive pool lowers its. You trade until the two **post-fee marginal prices meet**, and not one lamport further. Profit is the area of the triangle between the two converging price curves.
 
 ### Constant-product pools, worked
+
+<!-- level: expert -->
 
 Pool A (buy SOL here): 10,000 SOL and 1,000,000 USDC, price $100.
 Pool B (sell SOL here): 10,000 SOL and 1,020,000 USDC, price $102.
@@ -62,6 +105,8 @@ Plugging in: dy\* ≈ **3,727 USDC**, which buys 37.04 SOL on A and sells for 3,
 Three things to take from the table. Fees roughly halve the capturable profit on a 2 percent gap. Profit scales **linearly with pool depth** for a fixed percentage gap, so shallow memecoin pools produce many tiny arbs and deep SOL/USDC pools produce a few meaningful ones. And a 2 percent gap on a $1M pool yields $28, which is why Jito's detection data puts the **average successful Solana arb at $1.58** of profit.
 
 ### Concentrated-liquidity pools, worked
+
+<!-- level: expert -->
 
 In a concentrated pool (Orca Whirlpools, Raydium CLMM, Meteora DLMM) the math is different within a tick range. Liquidity is a constant `L`, and moving the price from `P_0` to `P_1` costs exactly `L · (sqrt(P_1) − sqrt(P_0))` of the quote token and yields `L · (1/sqrt(P_0) − 1/sqrt(P_1))` of the base token.
 
@@ -88,9 +133,11 @@ CEX-DEX arb does not get this protection. It carries genuine inventory and execu
 
 ## Solana specifics
 
+<!-- level: intermediate -->
+
 ### The clock
 
-Solana produces blocks continuously, with a leader rotating every four slots. Slots were 400ms for years. Two staged reductions landed on mainnet in August 2026: 350ms on 19 August (epoch 1019) and **300ms on 25 August (epoch 1023)**; 250ms and 200ms are live on devnet and testnet with mainnet activation gated on block skip rate. Alpenglow, the consensus replacement targeting roughly 150ms finality, is expected to begin mainnet feature activation in late September 2026 (unverified timeline). The practical point is unchanged: state updates every few hundred milliseconds, there is no idle period, and an arb you detect from a confirmed block is already a slot stale.
+Solana produces blocks continuously, with a leader rotating every four slots. Slots were 400ms for years. Staged reductions under SIMD-0525 then landed on mainnet: 350ms on 19 August 2026 (epoch 1019), 300ms on 25 August (epoch 1023) and **250ms on 18 September (epoch 1037)**; the final 200ms step has no announced date and is gated on block skip rate. Alpenglow, the consensus replacement targeting roughly 150ms finality, began activating on testnet in late September 2026; Anza's tentative Agave v4.4 schedule puts mainnet activation at 9 November 2026, with all dates subject to change. The practical point is unchanged: state updates every few hundred milliseconds, there is no idle period, and an arb you detect from a confirmed block is already a slot stale.
 
 ### No public mempool
 
@@ -98,7 +145,7 @@ Solana never had a native mempool; transactions go straight to the leader. Jito'
 
 ### Jito bundles and the tip auction
 
-A **Jito bundle** is up to five transactions that land in order, all or nothing, in the same block. You attach a **tip** (a SOL transfer to one of eight tip accounts, minimum 1,000 lamports, 6 percent protocol fee) and the block engine runs **parallel auctions every 50ms**. Bundles that touch the same accounts compete in one auction, ranked by **tip per compute unit**; non-conflicting bundles don't compete at all. Failed bundles cost nothing.
+A **Jito bundle** is up to five transactions that land in order, all or nothing, in the same block. You attach a **tip** (a SOL transfer to one of eight tip accounts, minimum 1,000 lamports; a 6 percent protocol cut, 3 percent Block Engine fee plus 3 percent TipRouter fee, all routed to the Jito DAO since JIP-24) and the block engine runs **parallel auctions every 50ms**. Bundles that touch the same accounts compete in one auction, ranked by **tip per compute unit**; non-conflicting bundles don't compete at all. Failed bundles cost nothing.
 
 The auction turns a latency race into a price race. Umbra observed tips at 20 to 50 percent of arb value in 2023; by 2025 Ghost's data had **arb bots paying 50 to 60 percent of profits in tips**, versus 15 to 20 percent for sandwich bots, which face less competition because the strategy needs privileged flow. The Jito-Solana client ran on roughly 92 percent of stake at the start of 2025.
 
@@ -116,15 +163,17 @@ Before a block is complete, the leader streams it as **shreds**. Whoever reassem
 
 ### Spam versus latency
 
-Solana's native scheduler is not first-come-first-served, and a failed transaction costs 5,000 lamports. So a rational bot, unsure whether it will win, sends many attempts and eats the failures. The results are stark: reverted transactions peaked at **75.7 percent of non-vote transactions in April 2024**, with Helius attributing about 95 percent of those to failed arb attempts; the Agave 1.18 scheduler in May 2024 brought that down. A year-long academic study (arXiv 2504.18055) found **bots fail 58 percent of the time versus 6 percent for humans**, with "price or profit not met" (slippage and arb conditions) the top cause at 48 percent. Umbra estimated 96 percent of atomic arb attempts failed in 2023. Flashbots frames this generally: for one bot they studied, every successful arb cost about 350 failed attempts. Bundles fix this partially (a losing bundle never lands), which is why auctions are the ecosystem's preferred answer to spam.
+Solana's native scheduler is not first-come-first-served, and a failed transaction costs 5,000 lamports. So a rational bot, unsure whether it will win, sends many attempts and eats the failures. The results are stark: reverted transactions peaked at **75.7 percent of non-vote transactions in April 2024**, with Helius attributing most of those to bot arb attempts (the 95 percent share often quoted is unverified); the Agave 1.18 scheduler in May 2024 brought that down. A year-long academic study (arXiv 2504.18055) found **bots fail 58 percent of the time versus 6 percent for humans**, with "price or profit not met" (slippage and arb conditions) the top cause at 48 percent. Umbra estimated 96 percent of atomic arb attempts failed in 2023. Flashbots frames this generally: for one bot they studied, every successful arb cost about 350 failed attempts. Bundles fix this partially (a losing bundle never lands), which is why auctions are the ecosystem's preferred answer to spam.
 
 ### Jupiter, prop AMMs, and the disappearing spread
 
 An aggregator splits a user's swap across every venue with the best marginal price. If a trade is routed well, it never leaves a 2 percent gap between Orca and Raydium; it fills both until their prices meet. **Jupiter** routes the large majority of Solana DEX volume (86 to 94 percent of aggregator-routed volume in 2025 depending on the month, with aggregators handling roughly three-quarters of all DEX volume), so the classic "retail user hits one pool and leaves a gap" setup is rarer than it was.
 
-The bigger shift is **proprietary AMMs** (HumidiFi, SolFi, Tessera V, ZeroFi, GoonFi, Obric, Lifinity). These are single-market-maker vaults with no frontend that quote off oracles and refresh their quotes for around 143 compute units, which gives them **cancel priority**: they reprice before a taker can hit a stale price. They took over 80 percent of aggregator execution by late 2025 (unverified) and now trade more SOL/USD volume than Binance. For arbitrageurs this means the venue that "already moved" is now on-chain, so CEX-DEX gaps can be captured atomically against lagging public pools, and Blockworks documents a tight correlation between prop-AMM share and cyclic-arb share of aggregator volume, with cyclic arb reportedly rising from about 2.5 percent of aggregator volume in August 2024 to over 40 percent by late 2025 (figure widely repeated, primary source unverified). The public `x * y = k` pools are the ones bleeding LVR; the prop AMMs are the market makers who stopped getting picked off.
+The bigger shift is **proprietary AMMs** (HumidiFi, SolFi, Tessera V, ZeroFi, GoonFi, Obric, Lifinity). These are single-market-maker vaults with no frontend that quote off oracles and refresh their quotes for around 143 compute units, which gives them **cancel priority**: they reprice before a taker can hit a stale price. They took over 80 percent of aggregator execution by late 2025 (unverified) and are reported to trade more SOL/USD volume than Binance (unverified). For arbitrageurs this means the venue that "already moved" is now on-chain, so CEX-DEX gaps can be captured atomically against lagging public pools, and Blockworks documents a tight correlation between prop-AMM share and cyclic-arb share of aggregator volume, with cyclic arb reportedly rising from about 2.5 percent of aggregator volume in August 2024 to over 40 percent by late 2025 (figure widely repeated, primary source unverified). The public `x * y = k` pools are the ones bleeding LVR; the prop AMMs are the market makers who stopped getting picked off.
 
 ## How competition compresses margins
+
+<!-- level: intermediate -->
 
 Gather the data points and the shape is clear:
 
@@ -163,12 +212,16 @@ The honest summary: atomic arb on Solana is a low-risk, low-margin, high-fixed-c
 
 ## How this connects to the rest of the stack
 
+<!-- level: intermediate -->
+
 - **Liquidations** are backruns of oracle updates. They use the same bundle path, the same tip auction, the same early-detection feeds, and the same "revert if unprofitable" guard. A team that can backrun a swap in the same slot can liquidate in the same slot.
 - **Market making** is the other side of the same trade. An arb engine knows the cross-venue fair price at every instant; that is the input a market maker needs to quote and the reason prop AMMs stopped getting picked off. When your MM is slow, the arbitrageur collecting LVR from you is running exactly the strategy described here.
 - **JIT liquidity** is a backrun-shaped strategy pointed the other way: land concentrated liquidity right before a large swap in the same slot, collect its fees, withdraw after. It needs the same early view of the incoming swap that backrunning needs, and lives or dies on the same detection latency.
 - **Fee and tip economics** are shared across all four. Learning what fraction of profit a bundle must tip to land, per builder, per congestion regime, is a single model that every atomic strategy consumes.
 
 ## Where to go next
+
+<!-- level: expert -->
 
 - The LVR papers (Milionis et al. 2022 and the 2023 fee follow-up) for the math behind "arb profit equals LP loss."
 - Tick-walking swap simulation for concentrated pools, since every real solver does this rather than the single-range closed form above.
@@ -197,6 +250,8 @@ The honest summary: atomic arb on Solana is a low-risk, low-margin, high-fixed-c
 - Blockworks Research, "Solana DEX Winners: All About Order Flow" (prop AMMs, cyclic arb correlation, flash-loan arb): https://app.blockworksresearch.com/unlocked/solana-dex-winners-all-about-order-flow
 - Helius, "Solana's Proprietary AMM Revolution" (prop AMM list, 143 CU quote updates, cancel priority, Jupiter share): https://www.helius.dev/blog/solanas-proprietary-amm-revolution
 - Extropy, "An Analysis of Arbitrage Markets Across Ethereum, Solana..." (bot concentration, infrastructure costs): https://academy.extropy.io/pages/articles/mev-crosschain-analysis-2025.html
-- Solana, "Reduced slot times" upgrade page (350ms and 300ms activation dates, 250ms/200ms status): https://solana.com/upgrades/reduced-slot-times
-- xroot.dev, "Alpenglow Finality in Numbers" (Alpenglow timeline): https://xroot.dev/blog/alpenglow-finality-in-numbers
+- Solana, "Reduced slot times" upgrade page (350ms and 300ms activation dates): https://solana.com/upgrades/reduced-slot-times
+- Solana Compass, "Solana Activates 250ms Slot Time at Epoch 1037" (18 September 2026): https://solanacompass.com/news/solana-activates-250ms-slot-time-at-epoch-1037-fourth-step-of-simd-0525
+- Solana Compass, "Alpenglow Activates on Testnet, Agave v4.4 Schedule Targets November 9 Mainnet" (22 September 2026; dates tentative): https://solanacompass.com/news/alpenglow-activates-on-solana-testnet-as-frankendancer-era-ends-agave-v44-schedule-targets-november-9-mainnet-activation
+- Jito Foundation forum, "JIP-24: Jito DAO Receives All Jito Block Engine Fees and Future BAM Fees" (3 percent Block Engine fee plus 3 percent TipRouter fee, all to the DAO): https://forum.jito.network/t/jip-24-jito-dao-receives-all-jito-block-engine-fees-and-future-bam-fees/860
 - Solana Compass, "DoubleZero Removes Unauthorized Retransmitters" (ShredStream successor, vendor claims): https://solanacompass.com/news/doublezero-removes-unauthorized-shred-retransmitters-claims-70-plus-lead-over-all-competitors

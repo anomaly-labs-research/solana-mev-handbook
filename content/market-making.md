@@ -4,6 +4,30 @@ _As of Sep 2026._
 
 Market making is deceptively simple to state and genuinely hard to do well — the entire discipline is about managing one central tension.
 
+<!-- only: beginner -->
+
+## In plain terms
+
+**What it is.** A market maker is a shopkeeper for a token. They post two prices at once: a **bid** (what they will buy at) and an **ask** (what they will sell at), with the ask a little higher. The gap is the **spread**. Someone sells to them at the bid, someone else buys at the ask, and the maker keeps the difference. They earn the markup, many times a day, without betting on direction.
+
+**A tiny example.** SOL is trading around $100. You post a bid at $99.90 and an ask at $100.10. One trader sells you a SOL for $99.90, another buys it for $100.10. You made 20 cents without caring whether SOL goes up or down. Narrow the gap and you get more trades but earn less on each; widen it and the reverse.
+
+**Why it is hard.** You do not choose who trades with you. The people most eager to hit your prices know something you do not, or are simply faster. If SOL is about to jump to $105, someone buys from you at $100.10 first: you sold cheap. If it is about to fall, someone sells to you at $99.90: you bought dear. Losing this way to better-informed traders is called **adverse selection**, and it is the market maker's main cost. You profit only when what you earn from ordinary traders, who trade for their own reasons, exceeds what you lose to informed ones.
+
+**Inventory.** If people keep selling to you, you end up holding a pile of SOL you never wanted. If it drops $2 while you hold 500 SOL, you are down $1,000 no matter how many spreads you earned. Makers handle this by nudging both prices down when they hold too much (so people buy from them and stop selling to them), and up when they hold too little. The rest of this page has a formal model for how far to nudge; the idea is just "lean against your pile".
+
+**Two ways to do it on Solana.** On an order-book exchange (Phoenix, OpenBook, Manifest) you place and cancel your own orders. But every move is a transaction, and Solana processes a new batch only once per slot, about a quarter of a second, so you cannot react instantly. The other way is to deposit tokens into a pool on a decentralized exchange (DEX) such as Orca or Raydium, where a formula sets the price. A pool is a market maker with its hands tied: it cannot pull its prices when informed traders show up, so its depositors, the **liquidity providers** or LPs, take the full hit. That loss is called **LVR**, and it is the same money the bots on the arbitrage page collect.
+
+**Who wins, who pays.** Makers earn the spread from ordinary traders, plus often a small rebate the exchange pays for providing liquidity. They pay informed traders, arbitrage bots, and a transaction fee for every quote update. The evidence is sobering: a study of the largest Uniswap pools found their LPs as a group earned $199 million in fees but lost $260 million to being picked off, so they would have done better simply holding their tokens. Where you make markets, meaning how much of a venue's flow is ordinary rather than informed, matters more than any formula.
+
+**What can go wrong.** Your prices go stale for a slot and a faster trader takes them. Your inventory grows during a crash and the loss dwarfs weeks of spread. The price leaves the range you chose for a pool deposit and you earn nothing. The measurement tool for all of this is **markout**: after each trade, did the price move for you or against you? If it keeps moving against you, you are the one being picked off.
+
+**Terms you will meet on this page.** A **slot** is Solana's block interval, roughly 250 milliseconds. A **CLOB** is a central limit order book, the list of everyone's orders. An **AMM** is an automated market maker, a pool that quotes by formula. **LVR** (loss-versus-rebalancing) is what a pool's LPs lose to arbitrage bots. **Markout** is where the price went after your trade. A **rebate** is a small per-trade payment from the exchange to makers. A **perp** is a perpetual futures contract, used to hedge inventory.
+
+**Bottom line.** Market making is a thin-margin business, and the margin is decided by who trades against you. The formulas here tell you where and how wide to quote; they cannot save you on a venue full of faster, better-informed traders.
+
+<!-- /only -->
+
 ## The core idea
 
 You continuously offer to both buy and sell an asset. You post a **bid** (price you'll buy at) and an **ask** (price you'll sell at), with the ask higher than the bid. The gap is the **spread**.
@@ -49,9 +73,11 @@ The two knobs: *where* you center your quotes (inventory control) and *how wide*
 
 ## DEX vs. order-book market making — an important split
 
+<!-- level: intermediate -->
+
 They're mechanically very different.
 
-**Order-book MM (Phoenix on Solana, or a CEX):** You actively post and cancel limit orders. You have fine control — you reprice constantly as the market moves, skew for inventory, pull quotes when you're uncertain. This is "real" market making and where the sophisticated strategies live. Phoenix is notable because it's a fully on-chain *central limit order book*, so you get order-book mechanics with on-chain settlement. The challenge: repricing costs transactions, and on Solana you're repricing against that 400ms slot clock — you can't update quotes continuously the way you can on a CEX with microsecond APIs.
+**Order-book MM (Phoenix on Solana, or a CEX):** You actively post and cancel limit orders. You have fine control — you reprice constantly as the market moves, skew for inventory, pull quotes when you're uncertain. This is "real" market making and where the sophisticated strategies live. Phoenix is notable because it's a fully on-chain *central limit order book*, so you get order-book mechanics with on-chain settlement. The challenge: repricing costs transactions, and on Solana you're repricing against that 250ms slot clock — you can't update quotes continuously the way you can on a CEX with microsecond APIs.
 
 **AMM LP-ing (Orca, Raydium):** You're a *passive* market maker. You deposit into a pool and the AMM formula quotes on your behalf using `x * y = k`. You can't reprice or skew — the curve does it mechanically. This means:
 
@@ -73,13 +99,17 @@ Five factors, roughly in order of importance:
 
 ## How this connects to arbitrage
 
+<!-- level: intermediate -->
+
 Market making and arbitrage are two sides of liquidity provision, and they share infrastructure:
 
-- Both need **fast, accurate price feeds** and low-latency execution against the slot clock (300ms since August 2026).
+- Both need **fast, accurate price feeds** and low-latency execution against the slot clock (250ms since 18 September 2026).
 - Arb is *taking* (you cross the spread to capture a gap); MM is *making* (you post the spread and wait). A sophisticated operation often does both — an arb engine already knows the "true" price across venues, which is *exactly* the input a market maker needs to set fair quotes and detect when its own quotes are stale.
 - The MEV/adverse-selection framing is identical: in arb you're the informed taker collecting LVR; in MM you're the passive maker *paying* it. Understanding both sides makes you better at each — when you're market making, you now know exactly who's picking you off and why.
 
 ## The Avellaneda-Stoikov model, with the formulas
+
+<!-- level: expert -->
 
 Now the math behind the intuition above. Avellaneda and Stoikov (2008) model a market maker who quotes around a mid-price `s` that follows a random walk with volatility `sigma`, holds inventory `q`, and must be flat by a horizon `T`. Fills arrive at a rate that decays exponentially with distance from the mid: `lambda(delta) = A * exp(-k * delta)`. Solving for the quotes that maximize expected utility gives two closed forms.
 
@@ -123,13 +153,19 @@ The two dials from the intuition section survive intact: `r` is *where* (invento
 
 ## Measuring flow toxicity
 
+<!-- level: intermediate -->
+
 "Where you make markets matters more than how" is only actionable if you can measure toxicity. Two families of metric:
+
+<!-- level: expert -->
 
 **VPIN / order-flow imbalance (the academic one).** Easley, López de Prado and O'Hara's **Volume-synchronized Probability of INformed trading** slices trading into `n` equal-*volume* buckets (not equal time), classifies each bucket's volume as buy- or sell-initiated, and takes the average absolute imbalance:
 
     VPIN = (1/n) * sum_i |V_buy_i - V_sell_i| / V
 
 Ranges 0 (balanced flow) to 1 (every bucket one-sided). Classification is usually **bulk volume classification**: assign the buy fraction of a bucket from the normal CDF of its standardized price change, so a bucket that rallied is mostly buys. The canonical window is ~50 buckets. High VPIN means persistent one-sided flow, which is what informed trading looks like from the maker's chair. Caveat: Andersen and Bondarenko argue its Flash-Crash "prediction" was mostly a volume–volatility artifact, and it is sensitive to bucket size. Treat it as a venue-level regime indicator, not a per-quote signal.
+
+<!-- /level -->
 
 **Markout (the practical one).** Markout is simply: after I got filled, where did the mid go? It is the direct, dollar-denominated measurement of adverse selection on *your own* fills, and it needs nothing but your fill log and a mid-price series.
 
@@ -149,19 +185,21 @@ Two more things the curve tells you. Where it *flattens* is your permanent adver
 
 ## Market making on Solana venues, concretely
 
-The venues differ in *how orders settle*, *what a requote costs you*, and *who pays whom*. First the constraint everything sits on: Solana mainnet slot time was 400ms for years, dropped to 350ms on Aug 19, 2026 and to **300ms on Aug 25, 2026**, with 250ms and 200ms live on devnet/testnet but unscheduled for mainnet. Every "400ms" in the sections above should now be read as "one slot, currently 300ms". A requote is a transaction; you cannot update faster than the slot, and in practice you land one cancel-and-replace per slot at best.
+<!-- level: intermediate -->
+
+The venues differ in *how orders settle*, *what a requote costs you*, and *who pays whom*. First the constraint everything sits on: Solana mainnet slot time was 400ms for years, dropped to 350ms on Aug 19, 2026 (epoch 1019), 300ms on Aug 25 (epoch 1023) and **250ms on Sep 18, 2026 (epoch 1037)**; the 200ms step has no announced mainnet date. Every "400ms" in the sections above should now be read as "one slot, currently 250ms". A requote is a transaction; you cannot update faster than the slot, and in practice you land one cancel-and-replace per slot at best.
 
 **Phoenix (Ellipsis Labs)** — a fully on-chain CLOB whose defining feature is being **crankless**. Serum/OpenBook-style books leave fills in an event queue that a third-party "crank" bot must process before anyone can withdraw; Phoenix keeps a single account per market holding all traders' balances, so the matching transaction updates both sides atomically — no pending state, no bot dependence. Makers hold **seats** (a per-market registration) which lets the program keep quoting cheap for accounts that cancel and replace constantly. Fees are per-market parameters charged to the taker in the quote token; maker fee on spot is generally zero (unverified — the fee page I could read is for Phoenix's newer perps venue, which lists 3.5 bps taker / 0.5 bps maker). Ellipsis reports major Solana spot pairs compressing from ~30 bps to ~5 bps price impact once Phoenix makers arrived.
 
-**OpenBook v2** — the Serum lineage, rebuilt on Mango v4 code. Still uses the request/event-queue design (`place_order` emits events, `consume_events` settles), so someone must crank, though v2's hybrid crank is lighter than Serum's. Published fee model: **4 bps taker, 2 bps maker rebate**, plus a 2 bps referrer/UI rebate for anyone hosting their own frontend or SDK integration; stable markets 1 bps / 0.5 bps (unverified). Supports oracle-pegged orders that reprice with an oracle without you sending a tx (unverified).
+**OpenBook v2** — the Serum lineage, rebuilt on Mango v4 code. Still uses the request/event-queue design (`place_order` emits events, `consume_events` settles), so someone must crank, though v2's hybrid crank is lighter than Serum's. Published fee model: **4 bps taker, 2 bps maker rebate**, plus a 2 bps referrer/UI rebate for anyone hosting their own frontend or SDK integration; stable markets 1 bps / 0.5 bps (unverified). Supports oracle-pegged orders (`OraclePegged` order params in the v2 program) that reprice with an oracle without you sending a tx.
 
 **Manifest (CKS Systems)** — a **feeless** spot CLOB: the core program charges no maker or taker fee ever; fees, if any, live in optional wrapper programs. Crankless like Phoenix, market creation costs 0.007 SOL of rent (vs. ~2 SOL OpenBook, 3+ SOL Phoenix), and the whitepaper claims roughly 45% less compute per order than Phoenix (unverified). Two features aimed squarely at makers: **global orders** let one pool of capital rest bids on many markets and only move tokens at fill time, and **reverse orders** flip side when filled, mimicking a one-tick AMM range without a requote.
 
 **Drift / Velocity** — Drift was drained of roughly $285–295M on 1 Apr 2026 (a compromised admin/multisig path, not a matching-engine bug) and relaunched as **Velocity** on 1 Jul 2026 in private beta, reportedly USDT-settled (unverified); the JIT design below is Drift's and carries over to Velocity, whose docs now serve it. A perps venue with three liquidity layers: **JIT auctions**, a decentralized limit order book (DLOB) and a backstop AMM. A taker's market order opens a reverse Dutch auction from a start price (best for the taker) linearly to an end price (their limit) over a duration set in 400ms wall-clock units — `duration = 10` is 4 seconds regardless of slot time. Makers call a single instruction that places, fills against the taker and settles in one transaction, so you never rest a stale order on the book. Fills go sequentially by price, not pro rata; unfilled size falls through to the DLOB, then the AMM. Fee schedule on majors: taker **6 / 5 / 4 / 2 bps** by 30-day volume tier, maker rebate a flat **0.25 bps** at every tier (older docs quoted up to 2 bps; the schedule has been cut). Spot on Velocity has no orderbook and no maker fee. Treat the rebate schedule as beta-era and subject to change.
 
-**Passive MM via concentrated liquidity** — Orca Whirlpools, Raydium CLMM, Meteora DLMM. Fee tier picks your tick granularity: Orca tiers run 0.01% to 2% with tick spacing tied to the tier; Raydium's four standard configs are 0.01%/1 tick, 0.05%/10, 0.25%/60, 1%/120. Positions out of range earn exactly zero fees (the fee-growth accumulator for the range stops moving). Raydium routes 84% of swap fees to LPs, the rest to RAY buybacks and treasury (unverified). Meteora DLMM arranges liquidity in discrete **bins** with zero slippage inside a bin and a **dynamic, volatility-aware fee** that rises when price is whipping — the closest an AMM gets to "widen when vol is high". Requote cost here is a position rebalance (burn + mint + swap), so you rebalance on a timer or a band, not per slot.
+**Passive MM via concentrated liquidity** — Orca Whirlpools, Raydium CLMM, Meteora DLMM. Fee tier picks your tick granularity: Orca tiers run 0.01% to 2% with tick spacing tied to the tier; Raydium's four standard configs are 0.01%/1 tick, 0.05%/10, 0.25%/60, 1%/120. Positions out of range earn exactly zero fees (the fee-growth accumulator for the range stops moving). Raydium routes 84% of swap fees to LPs, 12% to RAY buybacks and 4% to treasury. Meteora DLMM arranges liquidity in discrete **bins** with zero slippage inside a bin and a **dynamic, volatility-aware fee** that rises when price is whipping — the closest an AMM gets to "widen when vol is high". Requote cost here is a position rebalance (burn + mint + swap), so you rebalance on a timer or a band, not per slot.
 
-**What a requote costs.** Base fee is 5,000 lamports per signature; the priority fee is `ceil(cu_price * cu_limit / 1e6)` lamports and goes entirely to the leader. Illustrative: a cancel-and-place using 40k CU at 50k micro-lamports/CU pays 2,000 + 5,000 = 7,000 lamports, about $0.0014 at $200 SOL. Requoting *every* slot at 300ms is ~288k transactions/day, roughly **$400/day per market** in fees alone before any congestion premium — which is why nobody requotes every slot on every market, and why maker rebates (2 bps on a $1,000 fill is $0.20, or ~140 requotes) are the margin.
+**What a requote costs.** Base fee is 5,000 lamports per signature; the priority fee is `ceil(cu_price * cu_limit / 1e6)` lamports and goes entirely to the leader. Illustrative: a cancel-and-place using 40k CU at 50k micro-lamports/CU pays 2,000 + 5,000 = 7,000 lamports, about $0.0014 at $200 SOL. Requoting *every* slot at 250ms is ~346k transactions/day, roughly **$480/day per market** in fees alone before any congestion premium — which is why nobody requotes every slot on every market, and why maker rebates (2 bps on a $1,000 fill is $0.20, or ~140 requotes) are the margin.
 
 **Last look and quote staleness.** On a CEX, some venues give makers a **last look**: a few milliseconds to reject a fill after the taker commits. On-chain there is no such thing — your resting order is a firm commitment until your cancel *lands*, and the taker effectively gets the last look instead: they see your quote *and* the Pyth/Binance price in the same instant and only hit you when you're wrong. Your **staleness window** is the gap between the market moving and your cancel being included: at minimum one slot, realistically two to three once you count RPC propagation and leader scheduling, and much worse under congestion. Every design that helps is a way of shortening or sidestepping that window: JIT (never rest), oracle-pegged orders (the program reprices for you), wider spreads in the seconds after an oracle update, and pulling quotes entirely when your own markout at 1s turns negative.
 
@@ -171,10 +209,14 @@ The venues differ in *how orders settle*, *what a requote costs you*, and *who p
 | OpenBook v2 | On-chain CLOB, event queue + crank | 4 bps taker / 2 bps maker rebate (+2 bps UI rebate) | 1 tx per cancel/replace, plus crank dependency for settlement |
 | Manifest | On-chain CLOB, crankless, feeless core, global orders | 0 / 0 in core; wrappers may add fees | 1 tx; lowest compute per order of the three (unverified); reverse orders avoid some requotes |
 | Drift / Velocity (perps; post-exploit relaunch, private beta) | JIT auction + DLOB + AMM backstop | Taker 6→2 bps by tier; maker rebate 0.25 bps flat | JIT: 1 tx per fill, none to rest; DLOB: 1 tx per cancel/replace |
-| Orca / Raydium CLMM | Concentrated-liquidity AMM, passive | LP earns pool fee tier (0.01%–2%); Raydium LP share 84% (unverified) | Rebalance = burn + mint (+ swap), so periodic not per-slot |
+| Orca / Raydium CLMM | Concentrated-liquidity AMM, passive | LP earns pool fee tier (0.01%–2%); Raydium LP share 84% | Rebalance = burn + mint (+ swap), so periodic not per-slot |
 | Meteora DLMM | Binned liquidity, dynamic volatility fee | LP earns base + variable fee in active bin | Rebalance across bins, periodic |
 
 ## LVR, quantified
+
+<!-- level: intermediate -->
+
+<!-- level: expert -->
 
 The intuition section called adverse selection on an AMM "exactly LVR". Here is the number. Milionis, Moallemi, Roughgarden and Zhang (2022) define **loss-versus-rebalancing** as the gap between an LP's position and a portfolio that holds the same token quantities but rebalances at the *external* market price instead of the pool's stale one. Arbitrageurs capture exactly this gap. In continuous time, with the risky asset following geometric Brownian motion with volatility `sigma`:
 
@@ -188,6 +230,8 @@ For a constant-product pool this collapses to a clean constant:
 
 Worked: ETH-USDC at 5% daily vol gives `0.05^2 / 8 = 3.125 bps per day`, about **11% per year** of pool value handed to arbitrageurs. At a 30 bps fee tier the pool must turn over about **10.4% of its assets per day** in fee-paying volume just to break even against LVR; double volatility to 10% and the required volume quadruples. The same paper finds that over 99.99% of LP return *variance* in the ETH-USDC v2 pool is plain market beta — the LVR term is small in variance but it is a steady negative drift, which is precisely what compounds.
 
+<!-- /level -->
+
 **The empirical finding.** Loesch, Hindman, Richardson and Welch (2021) audited 17 Uniswap v3 pools covering 43% of TVL from launch to late 2021: those pools earned **$199.3M in fees against $260.1M of impermanent loss**, a net **−$60.8M versus holding**. Roughly half of individual LP positions lost money against holding (unverified), and among active managers the more frequently a position rebalanced the worse it did on average. Concentrated liquidity did not fix the problem; it made the bet bigger.
 
 **What this implies for concentrated-liquidity market making:**
@@ -199,6 +243,8 @@ Worked: ETH-USDC at 5% daily vol gives `0.05^2 / 8 = 3.125 bps per day`, about *
 - If your markout on CLMM "fills" (price crossing your ticks) looks like the toxic curve above, LVR is the reason, and the only levers are fee tier, range width, rebalance cadence, and — most of all — the pair.
 
 ## Where to go next
+
+<!-- level: expert -->
 
 - **Calibrate A-S on your own fills.** You have the formulas; the hard part is estimating `k` and `A` from live depth and picking `gamma` so the skew stays inside your risk limits.
 - **Build the markout pipeline first, before any strategy.** Fill log + as-of join to mid at 1s/10s/1min, segmented by venue and taker. It is the one metric that tells you whether any of the rest is working.
@@ -225,7 +271,7 @@ Read for this document; access dates Sep 2026. Papers first, then venue and prot
 - Solana Compass, *Level up: go crankless* (Jarry Xiao, Ellipsis) — https://solanacompass.com/learn/Validated/level-up-go-crankless-w-jarry-xiao-ellipsis-labs
 - Phoenix (perps) docs, Fees — https://docs.phoenix.trade/phoenix/matching-engine/fees and https://docs.phoenix.trade/
 - Solana Compass, OpenBook project page — https://solanacompass.com/projects/openbook
-- openbook-dex/openbook-v2 repository — https://github.com/openbook-dex/openbook-v2
+- openbook-dex/openbook-v2 repository (Mango v4 lineage; `consume_events`; `OraclePegged` orders in `state/orderbook/order.rs`) — https://github.com/openbook-dex/openbook-v2
 - CKS-Systems/manifest repository — https://github.com/CKS-Systems/manifest
 - CKS Systems, *The Orderbook Manifesto* — https://www.manifest.trade/assets/The_Orderbook_Manifesto.pdf
 - The Defiant, *Drift Protocol rebrands to Velocity DEX ahead of relaunch* (Apr 2026 exploit, ~$295M) — https://thedefiant.io/news/defi/drift-protocol-rebrands-to-velocity-dex-ahead-of-relaunch
@@ -233,7 +279,8 @@ Read for this document; access dates Sep 2026. Papers first, then venue and prot
 - Drift / Velocity docs, Trading fees — https://docs.velocity.exchange/trading/trading-fees
 - Drift / Velocity docs, JIT auctions — https://docs.velocity.exchange/developers/market-makers/jit-auctions
 - Orca docs, *Ticks, tick spacing and fee tiers* — https://docs.orca.so/liquidity/concepts/ticks-and-fees
-- Raydium docs, CLMM fees — https://docs.raydium.io/products/clmm/fees
+- Raydium docs, Protocol fees (CLMM tiers; 84% LP / 12% buyback / 4% treasury split) — https://docs.raydium.io/ray/protocol-fees
 - Meteora docs index (DLMM overview) — https://docs.meteora.ag/
 - Solana docs, *Transaction fees* — https://solana.com/docs/core/fees
 - Solana, *Reduced slot times* upgrade page — https://solana.com/upgrades/reduced-slot-times
+- Solana Compass, *Solana activates 250ms slot time at epoch 1037* (18 Sep 2026) — https://solanacompass.com/news/solana-activates-250ms-slot-time-at-epoch-1037-fourth-step-of-simd-0525

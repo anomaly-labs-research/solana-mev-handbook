@@ -4,9 +4,36 @@ _As of Sep 2026._
 
 This is a different animal from arbitrage and market making — no speed race, no MEV. It's a **carry** strategy: you get paid to hold a position, and the skill is in staying hedged.
 
+<!-- only: beginner -->
+
+## In plain terms
+
+**What it is.** A **perpetual future** ("perp") is a bet on a coin's price that you can hold forever, with borrowed money, without ever owning the coin. Because it never expires, nothing forces its price to match the real price of SOL. So exchanges use a **funding rate**: every hour or every eight hours, whichever side of the market is more crowded pays a small amount to the other side. When most traders are betting on a rise, the perp trades above the real price and the people betting up pay the people betting down. The strategy on this page is to be the side that gets paid, while arranging things so you do not care which way the price goes.
+
+**A tiny example.** SOL is $100. You buy 100 SOL for $10,000 and, at the same time, bet $10,000 against SOL on a perp exchange (a **short**). If SOL rises to $110, your coins gain $1,000 and the short loses $1,000: nothing changes. If SOL falls to $90, the reverse: nothing changes. Meanwhile, because the crowd is betting up, the short is paid funding: at 0.02% every eight hours that is about $2 per period, roughly $84 over two weeks. But you also had to park extra money at the perp exchange as a safety cushion, so you really used $20,000 to earn that $84, which works out to about 11% a year, not the 22% the funding rate itself suggests.
+
+**Why "delta-neutral" is a half-truth.** "Delta" is trader-speak for how much you gain or lose when the price moves. Owning coins and betting against them at the same time cancels out, so your delta is zero. But the two halves live in different places, and one of them can get you in trouble on its own.
+
+**What can go wrong.**
+
+- **Funding flips.** When the crowd turns bearish, the payment reverses and you become the one paying. The trade is only good while the sign holds, so it has to be watched.
+- **Liquidation.** The short is made with borrowed money and needs a deposit (**margin**) backing it. If SOL rockets, the short loses fast, and if the deposit runs low the exchange closes it for you at a loss (**liquidation**), even though your coins elsewhere gained the same amount. A big cushion protects you, and it is also what lowers your return.
+- **The exchange itself.** In April 2026 Solana's main perp exchange, Drift, was drained of roughly $290 million. A perfectly hedged position there lost both halves at once. Drift has since relaunched as Velocity.
+- **Costs.** Fees to open and close both halves, and money that has to sit in two places at once.
+
+**Who wins, who pays.** The payers are traders who want leveraged bets on a rise and will pay to keep them. The receivers are whoever supplies the opposite side: large "delta-neutral" funds such as Ethena, professional desks, and small operators. As more money piles into the receiving side the payment shrinks: recent years have seen long stretches under 5% a year and a few weeks of paying instead of receiving.
+
+**What this is not.** Not a speed game. No bots racing for block space, no tips to validators. It is a patient position you set up, watch and adjust.
+
+**Terms you will meet on this page.** **Spot** means buying the actual coin. **Long** is a bet the price rises; **short** a bet it falls. **Margin** is the deposit backing a leveraged bet; **maintenance margin** is the minimum before you are liquidated. **Basis** is the gap between a future's price and the spot price. An **oracle** is the price feed an exchange treats as the real price. A **TWAP** is an average price over a time window. **Cash-and-carry** is the name of the buy-spot, short-future trade. Jupiter Perps, Adrena and Flash Trade are Solana perp venues where you always pay a fee to hold a position and never receive one, so they cannot be the receiving side.
+
+**Bottom line.** You are being paid to absorb the risk that other people's leveraged bets blow up, and you keep the payment only while you keep the hedge alive. Real yield, real risk, boring most days and dangerous on a few.
+
+<!-- /only -->
+
 ## First, what a perpetual future actually is
 
-A **perpetual future** ("perp") is a derivative that tracks an asset's price but never expires. On Solana you'd trade these on Velocity DEX (the relaunched Drift — Drift was exploited for roughly $285–295M on 1 Apr 2026 and rebranded to Velocity on 1 Jul 2026, initially in private beta) or Jupiter's perps. Zeta shut its perps DEX in May 2025 to rebuild as Bullet, still in testnet as of Sep 2026.
+A **perpetual future** ("perp") is a derivative that tracks an asset's price but never expires. On Solana you'd trade these on Velocity DEX (the relaunched Drift — Drift was exploited for roughly $285–295M on 1 Apr 2026 and rebranded to Velocity on 1 Jul 2026, initially in private beta) or Jupiter's perps. Zeta shut its perps DEX in May 2025 to rebuild as Bullet, a Solana network extension whose mainnet went live in late September 2025 with Zeta X as its perps venue (unverified: current depth and funding data not checked).
 
 The problem perps have to solve: a normal futures contract expires, and at expiry its price is forced to converge with spot. A perp never expires — so what stops its price from drifting away from the real SOL price forever? The answer is the **funding rate**.
 
@@ -65,6 +92,8 @@ The pitch sounds risk-free. It isn't. Here's what actually bites:
 
 ## How it fits with a Solana arb stack
 
+<!-- level: intermediate -->
+
 This one reuses the *least* of an arb/MEV infrastructure:
 
 - No mempool watching, no priority-fee auction, no slot race. The edge is patience and risk management, not speed.
@@ -85,26 +114,36 @@ Funding-rate harvesting is the "boring yield" corner of the strategy map — no 
 
 ## How the funding rate is computed
 
+<!-- level: intermediate -->
+
 Every venue has its own recipe, but they all start from the same idea: measure how far the perp trades from "true" price, and charge that gap to the side that is pushing it.
 
-**The generic CEX formula.** Define the **premium index** `P = (mark − index) / index`, where *index* is a basket of spot prices and *mark* is an impact-adjusted perp price (Binance uses `[max(0, impact bid − index) − max(0, index − impact ask)] / index`). Add a fixed **interest rate** `I` (0.01% per 8h, i.e. 0.03%/day) meant to reflect the cost of holding the quote currency vs the base. Then `funding = P + clamp(I − P, −0.05%, +0.05%)`, capped at a per-market bound (±0.375% per 8h for BTC on Binance). The payment is simply `position notional × funding`, taken from one side and paid to the other at each settlement — every 8 hours on most CEXs, 4h or 1h on some.
+<!-- level: expert -->
 
-**Drift, now Velocity DEX (hourly).** Drift was drained for roughly $285–295M on 1 Apr 2026 and announced its rebrand to Velocity DEX on 1 Jul 2026, relaunching in private beta with the same funding design; the formula below is Drift's historical design, now carried by Velocity. The premium is the gap between a one-hour **mark TWAP** (bid/ask midpoint, exponentially weighted) and the **oracle TWAP**, and the hourly rate is `(1/24) × (mark_twap − oracle_twap) / oracle_twap`. The 1/24 matters: a perp trading 1% above oracle *all day* pays 1% over that day, not 1% per hour. Two adjustments sit on top: a **dead zone** (a small band around zero, in bps, treated as noise and dropped) and a **cap** on the premium at 3% of oracle for top-tier markets (5% and 10% for lower tiers). The docs also describe a baseline term of `oracle_twap / 3333` per hour (about 0.00125%/hr, roughly 10.95%/yr) — the same 0.03%/day interest constant as the CEX formula; how it stacks with the premium term is not spelled out (unverified). Payment is proportional to position size and settles into your margin account every hour.
+**The generic CEX formula.** Define the **premium index** `P = (mark − index) / index`, where *index* is a basket of spot prices and *mark* is an impact-adjusted perp price (Binance uses `[max(0, impact bid − index) − max(0, index − impact ask)] / index`). Add a fixed **interest rate** `I` (0.01% per 8h, i.e. 0.03%/day) meant to reflect the cost of holding the quote currency vs the base. Then `funding = P + clamp(I − P, −0.05%, +0.05%)`, capped at a per-market bound tied to the contract's maintenance margin ratio (±0.375% per 8h for BTC on Binance (unverified)). The payment is simply `position notional × funding`, taken from one side and paid to the other at each settlement — every 8 hours on most CEXs, 4h or 1h on some.
+
+**Drift, now Velocity DEX (hourly).** Drift was drained for roughly $285–295M on 1 Apr 2026 and announced its rebrand to Velocity DEX on 1 Jul 2026, relaunching in private beta with the same funding design; the formula below is Drift's historical design, now carried by Velocity. The premium is the gap between a one-hour **mark TWAP** (bid/ask midpoint, exponentially weighted) and the **oracle TWAP**, and the hourly rate is `(1/24) × (mark_twap − oracle_twap) / oracle_twap`. The 1/24 matters: a perp trading 1% above oracle *all day* pays 1% over that day, not 1% per hour. Two adjustments sit on top: a **dead zone** (a small band around zero, in bps, treated as noise and dropped) and a **cap** on the premium at 3% of oracle for top-tier markets (5% and 10% for lower tiers). The docs also add a baseline **floor** of `oracle_twap / 3333` to the premium before the 1/24 conversion (about 0.00125%/hr, roughly 10.95%/yr) — the same 0.03%/day interest constant as the CEX formula; inside the dead zone only the floor is paid, outside it the ramped excess sits on top of it. Payment is proportional to position size, accrues hourly as unrealized P&L and settles at your next action in that market (trade, deposit, withdrawal or explicit settle).
+
+<!-- /level -->
 
 **Jupiter Perps uses borrow fees, not funding.** Jupiter is a **pool-to-peer** venue: your counterparty is the JLP liquidity pool, not another trader, so there is no long/short imbalance to tether. Instead every open position — long *or* short — pays the pool an hourly **borrow fee** on the tokens it has locked: `hourly fee = utilization × hourly borrow rate × position size`, where utilization is locked tokens divided by pool tokens for that asset. The rate follows a **dual-slope (jump-rate)** curve: it rises gently up to an 80% utilization target (about 25% APR for SOL at target) and then jumps steeply toward a max of roughly 250% APR for SOL, 165% for ETH, 170% for BTC. The consequence for this strategy: **you can never be paid to hold a Jupiter position.** There is nothing to harvest there; Jupiter is only ever the leg you *pay* on.
 
-**Adrena and Flash Trade** follow the same pool-to-peer pattern. Adrena charges a utilization-linked borrow fee that rises linearly with pool utilization, quoted as 0–80.5% APR for SOL and WBTC (0–150.7% for BONK), with no funding between longs and shorts. Flash Trade charges hourly "margin fees" on notional (a snapshot of about 0.006%/hr, roughly 53%/yr, circulated in 2025 — unverified), again with no long/short funding. **Zeta Markets** shut its perps DEX in May 2025 to rebuild as Bullet, a Solana network extension; as of Sep 2026 Bullet is still in testnet and there is nothing to harvest there.
+**Adrena and Flash Trade** follow the same pool-to-peer pattern. Adrena charges a utilization-linked borrow fee that rises linearly with pool utilization, quoted as 0–80.5% APR for SOL and WBTC (0–150.7% for BONK), with no funding between longs and shorts. Flash Trade charges hourly "margin fees" on notional (a snapshot of about 0.006%/hr, roughly 53%/yr, circulated in 2025 — unverified), again with no long/short funding. **Zeta Markets** shut its perps DEX in May 2025 to rebuild as Bullet, a Solana network extension; Bullet's mainnet launched in late September 2025 with Zeta X as its perps venue, and it is not covered here (unverified: funding design and depth not checked).
 
-So on Solana today the only true funding market to harvest is the orderbook venue (Velocity), plus CEX and Hyperliquid perps off-chain. The pool-to-peer venues are places where *both* sides pay, which is the mirror image of what we want.
+So on Solana today the only true funding market to harvest covered here is the orderbook venue (Velocity), plus CEX and Hyperliquid perps off-chain. The pool-to-peer venues are places where *both* sides pay, which is the mirror image of what we want.
+
+<!-- level: expert -->
 
 **Worked example, premium to payment (Velocity-style).** Oracle TWAP is $100.00 and the mark TWAP over the last hour is $100.05 — a 5 bp premium.
 
 - Hourly rate = (1/24) × 0.0005 = 0.00208%/hr. Well under the 3% cap, above a typical dead zone.
 - You are short 100 SOL, $10,000 notional. Payment received this hour = $10,000 × 0.0000208 ≈ **$0.21**.
-- If that 5 bp premium persists all day: $5/day, 0.05%/day, about **18%/yr** on notional. Add the ~0.00125%/hr baseline if it applies and the total is nearer 29%/yr.
+- If that 5 bp premium persists all day: $5/day, 0.05%/day, about **18%/yr** on notional. Add the ~0.00125%/hr baseline floor and the total is nearer 29%/yr.
 - Same premium on a CEX 8h schedule: `P = 0.05%`, `I − P = −0.04%` (inside the clamp), funding = 0.01% per 8h, which is only 0.03%/day, about 11%/yr. The CEX formula pays *less* for the same premium because the interest term pulls it toward 0.01%; the hourly TWAP formula pays the premium straight through.
 
 ## Sizing the legs and the liquidation buffer
+
+<!-- level: expert -->
 
 The short leg dies from one thing: SOL rips up and the perp account's equity falls below **maintenance margin** before you can top it up from the spot side. Sizing is about choosing how big a rip you can survive.
 
@@ -129,19 +168,23 @@ Rule of thumb: run the short at 2x or less if collateral is stablecoins, and tre
 
 ## Basis trading with dated futures and cross-venue funding
 
+<!-- level: intermediate -->
+
 Funding harvest on perps is one member of a family. The other members change *how* you get paid and *what* can go wrong.
 
-**Cash-and-carry with dated futures.** Buy spot, short a monthly or quarterly future that trades above spot. The gap is the **basis**, and at expiry the future settles to spot *by construction*, so the basis converges to zero and you capture it. Annualize as `basis% × 365 / days to expiry`: spot $100,000, 90-day future at $102,000 is 2% × 365/90, about **8.1%/yr**, locked at entry. The attraction over perps is that the payout is fixed — no funding flips, no hourly monitoring. The costs: you are locked in (the basis can widen mid-life and mark against you), you must **roll** at expiry (about 0.1–0.3% of notional per roll), and exchange margin on futures is fatter (CME BTC asks about 40%). Historically quarterly BTC basis has run below perp funding — one long-run study puts active-contract basis at about 4.3%/yr vs 12.3%/yr for perp funding over 2020–2026 — because the fixed payout is worth a discount. No Solana venue lists dated futures as of Sep 2026; this leg is CEX-only.
+**Cash-and-carry with dated futures.** Buy spot, short a monthly or quarterly future that trades above spot. The gap is the **basis**, and at expiry the future settles to spot *by construction*, so the basis converges to zero and you capture it. Annualize as `basis% × 365 / days to expiry`: spot $100,000, 90-day future at $102,000 is 2% × 365/90, about **8.1%/yr**, locked at entry. The attraction over perps is that the payout is fixed — no funding flips, no hourly monitoring. The costs: you are locked in (the basis can widen mid-life and mark against you), you must **roll** at expiry (about 0.1–0.3% of notional per roll), and exchange margin on futures is fatter (CME BTC asks about 40%). Quarterly BTC basis has run below perp funding — the Binance backtest cited below puts the 2020–2026 average funding-implied BTC carry at 12.3%/yr against about 4.3%/yr on the 2026 dated contracts — because the fixed payout is worth a discount. No Solana venue lists dated futures as of Sep 2026; this leg is CEX-only.
 
 **Funding arbitrage across venues.** The same SOL perp funds differently on Binance, Bybit, Hyperliquid and Velocity because each has its own crowd. Go **long where funding is negative, short where it is positive**, and collect both sides with no spot leg at all. Example: venue A pays shorts +0.05% per 8h, venue B pays longs 0.01% per 8h; short A, long B, and you collect 0.06% per 8h, about 65%/yr gross on the notional, still delta-neutral. This is *more* capital-efficient than cash-and-carry (both legs earn) but doubles the liquidation surface, because now *two* margin accounts can blow up and they move in opposite directions.
 
 **CEX–DEX differentials.** Solana perps have a smaller, more retail-long crowd than Binance, so their funding runs hotter in both directions — historically more positive in Solana bull runs, and sharper negative prints in washouts (SOL on Hyperliquid printed about −18% annualized for the whole of Feb 2026, the lowest monthly reading in its series — unverified, via Coinglass). The trade is to short the venue with the elevated funding and long the calm one. Note that Jupiter, Adrena and Flash cannot be the *receiving* leg (they only charge), so the on-chain receiving leg is Velocity or nothing.
 
-**The frictions that eat it.** (1) **Transfer time**: rebalancing between a CEX and Solana means a withdrawal queue plus a bridge or on-ramp — minutes to hours, exactly when you need seconds. (2) **Collateral fragmentation**: each venue wants its own margin, so a $10k neutral position across two venues needs $10k of collateral *twice*, plus buffer in each. (3) **Non-atomic legs**: you cannot open both sides in one transaction, so you carry naked delta for the gap. (4) **Fees**: taker fees of about 4 bps per side per leg make a round trip about 16 bps, which is over a week of funding at 18%/yr — churning in and out on small differentials loses money. (5) **Sign flips are correlated**: a sharp move usually flips funding on *every* venue at once, so the cross-venue spread compresses exactly when you are paying to rebalance.
+**The frictions that eat it.** (1) **Transfer time**: rebalancing between a CEX and Solana means a withdrawal queue plus a bridge or on-ramp — minutes to hours, exactly when you need seconds. (2) **Collateral fragmentation**: each venue wants its own margin, so a $10k neutral position across two venues needs $10k of collateral *twice*, plus buffer in each. (3) **Non-atomic legs**: you cannot open both sides in one transaction, so you carry naked delta for the gap. (4) **Fees**: taker fees of about 4 bps per side per leg make a round trip about 16 bps, which is about three days of funding at 18%/yr — churning in and out on small differentials loses money. (5) **Sign flips are correlated**: a sharp move usually flips funding on *every* venue at once, so the cross-venue spread compresses exactly when you are paying to rebalance.
 
 ## What the historical data says
 
-**Long-run averages.** Ethena's funding-risk analysis (open-interest-weighted, roughly 2021 to early 2024) puts average annualized funding at **7.8% for BTC and 9.15% for ETH**, including the 2022 bear market. Year by year for ETH: about 16% in 2021, 0.6% in 2022, 9% in 2023, 13% in 2024 (unverified, from secondary coverage of the same data). Coin Metrics puts aggregate BTC/ETH funding at about **11% annualized in 2024 and about 5% in 2025**. A public Binance backtest over Jan 2020 to Apr 2026 finds gross carry of **9.0%/yr on BTC and 11.4%/yr on ETH** with drawdowns under 2% and the strategy flat about 65% of the time (it only enters when funding clears a threshold); the same study shows 2025 at 4.3%, which after a 4–5% USD cash rate is close to zero excess return. A separate SSRN paper reports 16%/yr and a Sharpe above 6 for a 3x-leveraged BTC carry (unverified; leverage and a calm sample flatter the number).
+<!-- level: intermediate -->
+
+**Long-run averages.** Ethena's funding-risk analysis (open-interest-weighted, the three years to end-2024) puts average annualized funding at **7.8% for BTC and 9.15% for ETH**, including the 2022 bear market. Year by year for ETH: about 16% in 2021, 0.6% in 2022, 9% in 2023, 13% in 2024 (unverified, from secondary coverage of the same data). Coin Metrics puts aggregate BTC/ETH funding at about **11% annualized in 2024 and about 5% in 2025**. A public Binance backtest over Jan 2020 to Apr 2026 finds gross carry of **9.0%/yr on BTC and 11.4%/yr on ETH** with drawdowns under 2% and the strategy flat about 65% of the time (it only enters when funding clears a threshold); the same study shows 2025 at 4.3%, which after a 4–5% USD cash rate is close to zero excess return. A separate SSRN paper reports 16%/yr and a Sharpe above 6 for a 3x-leveraged BTC carry (unverified; leverage and a calm sample flatter the number).
 
 **How often it flips.** Per Ethena's data, ETH funding was negative on **17.5% of days** and BTC on **15.9%**; the longest negative streak was **13 days** versus a positive streak of 176 days (late 2023 to early 2024); only one quarter in three years (Q3 2022) had a negative average. Negative funding clusters in crashes: Luna/3AC and FTX in 2022, the Feb 2025 Bybit hack, the 10 Oct 2025 flash crash. The Feb 2026 drawdown printed the worst readings since 2023 — BTC daily annualized funding hit **−15.46%** on 6 Feb 2026 and the 7-day average reached −3.5% (K33). So: the sign is positive roughly five days in six, but the negative sixth arrives in bursts, and it is the same burst that threatens your short's margin.
 
@@ -150,6 +193,8 @@ Funding harvest on perps is one member of a family. The other members change *ho
 **Delta-neutral yield in practice, and the crowding effect.** Ethena is the largest live version of this trade and publishes its yield: sUSDe launched at 27% APY in Feb 2024, briefly exceeded 60%, averaged roughly 19% over 2024, ranged 4–15% through 2025, and sat near 4% by Aug 2026, with most 2024–2025 periods clearing 8–18% (partly unverified, from secondary coverage). USDe supply peaked near **$14B in Oct 2025** and contracted to about $5–6B in 2026 (unverified). The 60% peak happened when Ethena's short book was small relative to open interest; as it and every copycat vault grew, their shorts *became* the counterparty that the longs needed, which is exactly the thing that pushes premium down. This is the **crowding effect**: the return source is other people's leverage demand, and every dollar of delta-neutral capital supplies the short that meets it. Funding compresses toward the interest floor (~11%/yr on the CEX formula) as arbitrage capital grows, and in 2025 it compressed *through* it. Expect realized yields in the high single digits in calm regimes, 20%+ only in the euphoric months, and negative carry for a few weeks a year.
 
 ## Where to go next
+
+<!-- level: expert -->
 
 - **Live parameters** — pull the current maintenance margin ratio, asset weights for SOL and LSTs, and the funding dead zone and cap for each Velocity market from the venue itself before sizing; everything above uses illustrative values.
 - **Regime detection** — the data section shows funding sign is autocorrelated (176-day positive streaks, 13-day negative ones). A simple rule for when to be in, out, or flipped is the next thing to build, before any execution work.
@@ -169,6 +214,9 @@ Funding harvest on perps is one member of a family. The other members change *ho
 - eli5defi, The Solana Perps Season (Zeta shutdown, Bullet): https://eli5defi.substack.com/p/the-solana-perps-season
 - Solana Compass, Zeta Markets profile: https://solanacompass.com/projects/zeta-markets
 - CoinGlass Learn, funding rates: https://www.coinglass.com/learn/funding-rates-1
+- Binance, Introduction to Binance Futures Funding Rates (premium index, interest rate, clamp): https://www.binance.com/en/support/faq/detail/360033525031
+- Drift Protocol docs, Account Health (historical SOL asset weights, 80% initial / 90% maintenance): https://docs.drift.trade/trading/account-health
+- CoinCodeCap, "Zeta Review: Solana's Perp Pioneer Evolved into Bullet" (Bullet mainnet 29 Sep 2025): https://coincodecap.com/zeta-review
 - Ethena docs, funding risk: https://docs.ethena.fi/protocol-overview/risks/funding-risk
 - Coin Metrics, State of the Network 335 (Ethena mechanics): https://coinmetrics.substack.com/p/state-of-the-network-issue-335
 - Eco, Ethena USDe and sUSDe 2026: https://eco.com/support/en/articles/15254002-ethena-usde-and-susde-2026-delta-neutral-yield

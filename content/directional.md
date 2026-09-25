@@ -4,6 +4,26 @@ _As of Sep 2026._
 
 Everything else in this folder gets paid for doing a job the market needs done: closing a price gap, absorbing a liquidation, quoting a spread, holding the unpopular side of a perp. Directional trading gets paid for nothing except being right about where price goes next. That makes it the purest bet in the map, and the one where the house edge is against you by default.
 
+<!-- only: beginner -->
+
+## In plain terms
+
+**What it is.** Directional trading is the ordinary kind of trading: you buy something because you think its price will be higher later, or bet against it because you think it will be lower, and you hold that position for hours, days or weeks. Every other strategy in this handbook gets paid for doing a job, like closing a price gap or lending money to a borrower who needs it. This one gets paid only for being right. Nobody on the other side is obliged to lose to you, and they have the same charts and the same news. Any edge has to come from knowing something first, from a pattern in prices that really repeats, or simply from managing risk better than the crowd.
+
+**Six kinds of bets.** **Trend following** buys what has been going up and sells what has been going down, on the theory that moves continue. **Cross-sectional momentum** buys the coins that did best recently and bets against the worst. **Mean reversion** does the opposite over a day or less: yesterday's losers tend to bounce. **Carry** collects the payments that leveraged traders make to hold their positions. **On-chain signals** read the blockchain itself (coins moving to exchanges, stablecoin supply, crowded leverage) as a mood gauge. **Event trading** positions around scheduled events like token unlocks (when locked-up tokens are released to insiders) and exchange listings.
+
+**A tiny example.** A fund with $1,000,000 wants its whole portfolio to swing about 15% a year. SOL itself swings about 80% a year, so the fund holds only $187,500 of SOL, roughly 1,875 SOL at $100. SOL drops to $88 and gets even choppier: the fund is down $22,500, about 2.25% of its money, and its rule says shrink the position to $125,000, so it sells into the drop. SOL then recovers to $130. The fund ends up around $37,000 to $51,000 ahead, less than the $56,000 it would have made by just holding, because it was smaller during part of the recovery. That gap is the deliberate price of never being too big when things go wrong. Trading fees for getting in and out are a few hundred dollars; if the position had been on borrowed money, the borrowing cost over eight weeks could have eaten 3% to 15% of it.
+
+**Why it is hard.** The signals are all public, so any obvious pattern is already being traded. Test results are easy to fake by accident: try a hundred variations on one year of data and the best one will look brilliant by pure luck. Trend strategies make their money in a few big moves and lose small amounts most of the time, so they spend most of their life below their previous high, and in crypto those dips are deep. The cleanest study of people who day trade for a living found that 97% of those who kept at it for more than 300 days lost money, and they did not get better with practice.
+
+**Who wins, who pays.** Systematic trend funds have made money in crypto across the roughly ten years of data available, but the honest expectation after costs is modest and comes with long, painful losing stretches. Discretionary traders, on average, lose to them and to fees. There is also a risk that has nothing to do with price: you are lending your money to the venue for weeks at a time, and in April 2026 one of the largest Solana perpetuals exchanges lost about $285 million to a hack.
+
+**Terms you will meet on this page.** **Volatility** is how much a price swings. A **drawdown** is the fall from a previous high. A **perp** (perpetual futures contract) lets you bet with borrowed money, and **funding** or **borrow fees** are what you pay to keep that bet open; together they are the trade's **carry**. A **backtest** is a test of a strategy on past data. A **Sharpe ratio** is return per unit of risk; above 1 is very good, and published numbers above that deserve suspicion. **Vol targeting** is the sizing rule in the example above.
+
+**Bottom line.** This is the strategy with no structural edge, the easiest one to fool yourself about, and the one least connected to the fast-lane infrastructure the rest of this handbook is built on. For a trading team it is mostly a question of what to do with idle inventory, not a source of edge.
+
+<!-- /only -->
+
 ## The core idea
 
 You buy (or short) an asset because you expect its price to be higher (or lower) in a few hours to a few weeks. There is no atomic round trip, no protocol-defined bonus, no spread to capture. You hold **inventory**, and the P&L is simply exit price minus entry price minus costs.
@@ -18,6 +38,8 @@ Most retail activity here is discretionary and loses. The systematic families be
 
 ## Family 1: time-series momentum (trend following)
 
+<!-- level: intermediate -->
+
 **Time-series momentum (TSMOM)** looks only at an asset's own past: if BTC is above where it was 3 months ago, be long; if below, be short or flat. Classic implementations use moving-average crossovers, breakout channels or the sign of the trailing 1-12 month return, then scale the position by inverse volatility.
 
 Why it might work at all: trends come from slow diffusion of information and from herding, and crypto has both in abundance plus no valuation anchor to pull price back. Man AHL's research note on crypto trend following argues that liquidity, volatility and the lack of a fundamental anchor make crypto "fertile ground" for trend, and finds that once positions are volatility-scaled, Bitcoin's left tail is more benign than the S&P 500's. Their key portfolio-construction result: risk-adjusted returns peak at around 10-15 coins, because average pairwise correlation is about 0.6 (so there is little diversification to harvest) and beyond the top 15 or so coins slippage rises fast enough to eat what is left.
@@ -28,12 +50,14 @@ Academic and practitioner backtests are consistent in sign but wildly different 
 |---|---|---|
 | Rozario et al., "A Decade of Evidence of Trend Following in Cryptocurrencies" (arXiv 2020) | Crypto, ~2010-2020 | Walk-forward returns reported in the hundreds of percent per year; risk-adjusted profile "similar to commodities"; strong diversification vs equities in bear markets. Costs not addressed in the abstract. |
 | Zarattini, Pagani, Barbon, "Catching Crypto Trends" (Concretum, 2025) | Top-20 liquid coins, ensemble of Donchian channels, vol-based sizing | Sharpe above 1.5, ~10.8%/yr alpha to Bitcoin; explicit attention to rebalancing costs. |
-| Quantpedia multi-timeframe MACD study | BTC, Dec 2018 - Nov 2025 | Buy-and-hold: >60%/yr with a ~80% max drawdown. The best trend rule: Sharpe 1.07, roughly 15%/yr; the naive single-timeframe version made only 4.6%/yr. |
+| Quantpedia multi-timeframe MACD study | BTC, Dec 2018 - Nov 2025 | Buy-and-hold: >60%/yr with a ~80% max drawdown. The best trend rule: Sharpe 1.07, roughly 15%/yr (annual return unverified; the article states Sharpe 1.07 and Calmar 0.87); the naive single-timeframe version made only 4.6%/yr. |
 | "AdaptiveTrend" (arXiv 2026) | 150+ pairs, 6-hour bars, 2022-2024 out-of-sample | Sharpe 2.41, max drawdown -12.7%. Three years is a short sample and 6-hour bars imply real turnover. |
 
 Read the spread of results as: the direction of the effect is robust, the size depends enormously on lookback choice, universe, cost model and sample. Anything above a Sharpe of 1 in a public backtest should be treated as an upper bound.
 
 ## Family 2: cross-sectional momentum
+
+<!-- level: intermediate -->
 
 **Cross-sectional momentum** ranks many coins by trailing return and goes long the top decile against the bottom decile, market-neutral by construction. Liu, Tsyvinski and Wu (NBER 2019, Journal of Finance 2022) built the crypto analogue of the equity factor zoo and found that a three-factor model of crypto market, size and momentum explains the cross-section; nine characteristic-sorted long-short strategies earned sizable, significant excess returns, and the momentum factor is one of the three that prices everything else. The profitable momentum lookbacks in that work are short, one to four weeks rather than the 12 months used in equities (specific weekly return magnitudes from the paper: unverified, the PDF was not readable at time of writing).
 
@@ -41,13 +65,19 @@ Dobrynskaya's follow-up on roughly 2,000 coins over 2014-2020 reports positive m
 
 ## Family 3: short-horizon mean reversion
 
+<!-- level: intermediate -->
+
 At horizons of a day or less the sign flips: yesterday's losers beat yesterday's winners. A study of over 3,600 coins finds a significant daily reversal and attributes it to illiquidity, meaning the effect is a compensation for providing liquidity to price-pressured markets rather than a mispricing (whether it survives realistic costs: unverified). Structurally this is market making at a one-day rebalance frequency, with the same adverse-selection exposure. For a team already running quoting infrastructure it is more natural to express this as a wider-spread, slower-refresh inventory strategy than as a "directional" trade.
 
 ## Family 4: carry
 
+<!-- level: intermediate -->
+
 Carry in crypto is the funding rate. Being paid to hold the unpopular side is a return source that does not require a price view, so it is covered in its own explainer, [funding-rate.md](funding-rate.md). Two ways it re-enters directional trading: as a **cost** (a leveraged long that pays funding or a borrow fee for three weeks is bleeding carry the whole time), and as a **signal** (see Family 5).
 
 ## Family 5: on-chain and flow signals
+
+<!-- level: intermediate -->
 
 Crypto is unusual in exposing so much of its plumbing, and every metric below is sold somewhere as a leading indicator. The honest summary is that they are **sentiment and positioning gauges**, occasionally useful as filters, rarely stand-alone signals.
 
@@ -58,15 +88,19 @@ Crypto is unusual in exposing so much of its plumbing, and every metric below is
 
 ## Family 6: event-driven
 
+<!-- level: intermediate -->
+
 Scheduled events are where information edge is most defensible, because the calendar is public but positioning around it is not uniform.
 
 **Token unlocks.** Keyrock's study of 16,000+ unlock events across 40 tokens is the best public evidence: about 90% of unlocks create negative price pressure regardless of size or type; team unlocks are the worst at roughly -25% on average; ecosystem unlocks are the only category with a slightly positive average (+1.2%); unlocks above 5% of supply produce about 2.4x sharper drops. The impact starts around 30 days before the unlock date and volatility subsides within about 14 days after. The tradable implication is a short (or exit) a month ahead of large cliff unlocks and a possible re-entry two weeks after.
 
-**Listings and airdrops.** Major-exchange listing announcements produce immediate jumps (recent examples of +33% to +60% within hours), but the move happens on the announcement, so you either have the information early or you are the exit liquidity. Airdrop farming is effectively unpaid labour with an option payoff; the median outcome depends entirely on which programme, and published "median ROI" figures from exchanges are marketing (unverified).
+**Listings and airdrops.** Major-exchange listing announcements produce immediate jumps (recent examples of +33% to +60% within hours, unverified), but the move happens on the announcement, so you either have the information early or you are the exit liquidity. Airdrop farming is effectively unpaid labour with an option payoff; the median outcome depends entirely on which programme, and published "median ROI" figures from exchanges are marketing (unverified).
 
 **Governance.** Fee switches, emissions changes and treasury votes are slow, public and thinly traded; the edge is reading proposals faster than the forum does. Small, occasional, and hard to systematise.
 
 ## Backtesting pitfalls
+
+<!-- level: intermediate -->
 
 Directional strategies are where most fake alpha is manufactured, because the data is cheap and the search space is huge.
 
@@ -78,22 +112,28 @@ Directional strategies are where most fake alpha is manufactured, because the da
 
 ## Position sizing: volatility targeting and Kelly
 
+<!-- level: expert -->
+
 **Volatility targeting** sizes each position so that its expected contribution to portfolio volatility is constant: position notional = (target vol / asset vol) × capital. When vol doubles, you halve the position. This is the single most important idea in systematic directional trading, and it is what makes Man AHL's "benign left tail" claim possible: the strategy de-levers into chaos automatically.
 
 The **Kelly criterion** gives the growth-optimal fraction. For a continuous return stream, f* ≈ μ / σ², expected excess return over variance. A signal with 20%/yr expected excess return on an asset with 80% annualised vol gives f* = 0.20 / 0.64 ≈ 31% of capital. Nobody runs full Kelly because μ is estimated with huge error and the penalty for overbetting is ruin: **half-Kelly** gives up about a quarter of the growth for half the variance. Practitioners point out that a fixed vol target is just a fractional-Kelly bet in disguise, and in the example above a 15% vol target (about 19% of capital) lands close to half-Kelly.
 
 ## A worked example: a volatility-targeted SOL trend position
 
+<!-- level: expert -->
+
 - Capital: $1,000,000. Portfolio vol target: 15%/yr. Signal: 20-day EMA above 100-day EMA on SOL, so the model says long.
 - SOL realised vol: 80%/yr (about 4.2%/day). Position = 0.15 / 0.80 × $1M = **$187,500 notional**, roughly 1,875 SOL at $100.
 - Daily P&L standard deviation: $187,500 × 4.2% ≈ $7,900, which is 0.79% of capital, matching the 15%/yr target (15% / sqrt(365) ≈ 0.79%).
 - Week 2: a leveraged flush takes SOL to $88 and realised vol to 120%. The position is now marked at -$22,500 (-2.25% of capital), and the rebalance rule shrinks notional to 0.15 / 1.20 × $1M = $125,000. You sell about 450 SOL into the drop. This feels terrible and is the point: the system is reducing risk exactly when the tail is fat.
-- Week 6: SOL trends to $130, vol back to 80%, position back to $187,500 notional. Cumulative gain on the varying position is roughly +$45,000 to +$50,000 (+4.5-5%), not the +30% a fixed-size hold would show, because you were smaller during part of the move. That is the price of the volatility cap.
+- Week 6: SOL trends to $130, vol back to 80%, position back to $187,500 notional. Cumulative gain on the varying position is roughly +$37,000 to +$51,000 (+3.7-5.1%), depending on how quickly vol falls back and you re-lever, not the +$56,000 (+5.6% of capital, a 30% move on 1,875 SOL) a fixed-size hold would show, because you were smaller during part of the move. That is the price of the volatility cap.
 - Week 8: the 20-day EMA crosses below the 100-day. Exit. Costs over the trade: two spot legs at 10-30 bps each through Jupiter, about $400-1,100 total; had this been a 2x perp position instead, add 0.06% open and close plus borrow fees on the order of 0.05-0.3% per day depending on pool utilisation, which over eight weeks is another 3-15% of notional. Carry is what kills slow trades on leverage.
 
 ## Risk limits and drawdown control
 
-Trend following makes money in a few large moves and loses small amounts most of the rest of the time; the equity curve is positively skewed and spends most of its life below its high-water mark. Man Group's own analysis of the SG Trend index: a -18.6% rolling 12-month return in April 2025 was only the third time in the index's history it had lost more than 15%, and a strategy with Sharpe 0.5 at 10% vol has nearly a four-in-five chance of a 20%+ drawdown over 25 years. Crypto vol is several times higher, so scale those expectations up.
+<!-- level: intermediate -->
+
+Trend following makes money in a few large moves and loses small amounts most of the rest of the time; the equity curve is positively skewed and spends most of its life below its high-water mark. Man Group's own analysis of the SG Trend index: a -18.6% rolling 12-month return in April 2025 was only the second time in the index's history it had lost more than 15% (the other was -16.0% in January 2019), and a strategy with Sharpe 0.5 at 10% vol has nearly a four-in-five chance of a 20%+ drawdown over 25 years. Crypto vol is several times higher, so scale those expectations up.
 
 Practical limits, in order of importance:
 
@@ -104,6 +144,8 @@ Practical limits, in order of importance:
 
 ## Execution on Solana
 
+<!-- level: intermediate -->
+
 The venue map changed materially this year, so check before relying on anything below.
 
 | Need | Venue | Mechanics and cost |
@@ -112,7 +154,7 @@ The venue map changed materially this year, so check before relying on anything 
 | Resting orders | Jupiter Trigger (Limit V2) | Keeper-executed, triggers on USD price or market cap, partial fills allowed, expiry from 1 hour to 30 days. Fee 0.1% base (0.03% on stable pairs) plus 0-0.5% Ultra routing fee. Stop-losses are **not guaranteed** to fill if price gaps through the level or liquidity is thin. |
 | Scaling in over time | Jupiter Recurring (DCA V2) | Time-based (minute to weekly) or price-conditional; minimum $10 per sub-order; sub-orders jittered ±30 seconds to blunt MEV. Same fee tiers as Trigger. |
 | Leverage and shorting | Jupiter Perps | SOL, ETH, wBTC against the JLP pool; oracle-settled (Pyth, Chainlink, Edge), so no order book to work. 0.06% open and close, a price-impact fee that grows with OI imbalance, and an hourly **borrow fee** = utilisation × hourly rate × size (the docs' example: about $0.24/hour on $10k at 19.8% utilisation). Leverage up to 250x is offered; liquidation forfeits all remaining collateral. |
-| Leverage and shorting (alt) | Velocity DEX (formerly Drift) | Drift was drained of roughly $285-295M on 1 April 2026 via multisig social engineering and governance takeover, rebranded as Velocity on 1 July 2026 and is in private beta at time of writing. Documentation exposes configurable leverage up to 80x and Pyth-based oracles; live parameters must be read on-chain. |
+| Leverage and shorting (alt) | Velocity DEX (formerly Drift) | Drift was drained of roughly $285-295M on 1 April 2026 via multisig social engineering and governance takeover, rebranded as Velocity on 1 July 2026, ran a private beta over the summer, and open-sourced its code on 17 September 2026 with a beta for all users announced for the following days, while still under a Solana Foundation STRIDE review. Documentation exposes configurable leverage up to 80x and Pyth-based oracles; live parameters must be read on-chain. |
 
 The structural difference from the rest of the stack: **inventory has a holding cost**. An atomic arb is flat at the end of the slot; a swing trade pays borrow or funding every hour, is exposed to every venue's tail risk for its whole life, and has to get out through the same thin liquidity it got in through. On Solana the leveraged venues are pool-versus-trader designs where the pool is the counterparty and sets the borrow rate, so a crowded long side raises your carry precisely when the trend is most obvious.
 
@@ -134,11 +176,15 @@ The structural difference from the rest of the stack: **inventory has a holding 
 
 ## How it fits with the rest of the stack
 
+<!-- level: intermediate -->
+
 Very little overlaps. Directional trading shares the **price feeds** (a system that already sees every SOL venue has the cleanest possible input for realised vol and trend signals) and the **venue integrations** (the same Jupiter and perps clients used for hedging or funding harvest can place the trades). Everything else is different: no slot race, no bundle bidding, no state decoding under time pressure, and a risk book measured in weeks rather than milliseconds.
 
 If it has a role in an MEV/arb operation, it is as a **treasury view** rather than a strategy: deciding what the inventory that arb and market making inevitably accumulate should look like, and whether idle capital should be flat, in a funding harvest, or carrying a small vol-targeted trend book. It is in this map for completeness and so that the vocabulary is shared; it is not where a latency-sensitive team's edge is.
 
 ## Where to go next
+
+<!-- level: expert -->
 
 - **Time-series momentum construction:** lookback ensembles, vol scaling, and the turnover/cost trade-off, using Man AHL's and Concretum's papers as templates.
 - **Deflated Sharpe and combinatorial cross-validation:** how to count trials and haircut a backtest before believing it.
@@ -167,3 +213,4 @@ If it has a role in an MEV/arb operation, it is as a **treasury view** rather th
 - Velocity (ex-Drift) docs, Perpetual Market Specs — https://docs.velocity.exchange/trading/market-specs
 - The Crypto Times, "Drift Rebrands to Velocity Ahead of Private Beta Launch" (2 Jul 2026) — https://www.cryptotimes.io/2026/07/02/drift-rebrands-to-velocity-ahead-of-private-beta-launch/
 - The Defiant, "Drift Protocol Rebrands to Velocity DEX Ahead of Relaunch" — https://thedefiant.io/news/defi/drift-protocol-rebrands-to-velocity-dex-ahead-of-relaunch
+- KuCoin News, "Velocity Opens Beta and Goes Open Source" (17 Sep 2026; OtterSec audit, STRIDE review) — https://www.kucoin.com/news/flash/velocity-opens-beta-and-goes-open-source-focuses-solely-on-perpetual-contracts
