@@ -27,7 +27,7 @@ export default function Home() {
           <div className="mt-10 flex flex-wrap gap-3">
             <Link
               href="/docs/strategies"
-              className="rounded-lg bg-fg px-4 py-2.5 text-sm font-medium text-bg transition hover:bg-white/90"
+              className="rounded-lg bg-fg px-4 py-2.5 text-sm font-medium text-bg transition hover:opacity-90"
             >
               Start with the landscape
             </Link>

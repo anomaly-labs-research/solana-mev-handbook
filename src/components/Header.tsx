@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
 import { ModeSwitch } from "./ModeSwitch";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function Header() {
   return (
@@ -34,6 +35,7 @@ export function Header() {
             </Link>
           </nav>
           <ModeSwitch />
+          <ThemeToggle />
         </div>
       </div>
     </header>

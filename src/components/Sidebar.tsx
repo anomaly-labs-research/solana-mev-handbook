@@ -32,7 +32,7 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
                     <span className="flex items-center gap-2">
                       <span
                         className={`h-1 w-1 shrink-0 rounded-full ${
-                          active ? "bg-accent" : "bg-transparent"
+                          active ? "bg-accent-2" : "bg-transparent"
                         }`}
                       />
                       {doc.title}

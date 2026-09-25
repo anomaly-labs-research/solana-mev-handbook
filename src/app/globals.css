@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
-/* Neutral graphite dark theme with one restrained indigo accent. */
+/* Neutral graphite dark theme with the Solana brand purple and green as accents. <html data-theme> is set
+   before paint by the boot script; light overrides live below the dark defaults. */
 :root {
   --bg: #09090b;
   --bg-elevated: #0f0f12;
@@ -10,10 +11,47 @@
   --fg: #fafafa;
   --fg-muted: #a1a1aa;
   --fg-faint: #6f6f7a;
-  --accent: #818cf8;
-  --accent-strong: #a5b4fc;
-  --accent-soft: rgba(129, 140, 248, 0.14);
+  --accent: #9945ff;
+  --accent-strong: #b57bff;
+  --accent-soft: rgba(153, 69, 255, 0.16);
+  --accent-2: #14f195;
   --warn: #fbbf24;
+  --warn-soft: rgba(251, 191, 36, 0.1);
+  --warn-border: rgba(251, 191, 36, 0.3);
+  --grid-line: rgba(255, 255, 255, 0.04);
+  --spot: rgba(255, 255, 255, 0.08);
+  --code-bg: rgba(255, 255, 255, 0.06);
+  --thead-bg: rgba(255, 255, 255, 0.03);
+  --row-hover: rgba(255, 255, 255, 0.02);
+  --link-underline: rgba(181, 123, 255, 0.35);
+  --selection: rgba(153, 69, 255, 0.35);
+  color-scheme: dark;
+}
+
+html[data-theme="light"] {
+  --bg: #fafafa;
+  --bg-elevated: #ffffff;
+  --bg-hover: #f0f0f2;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.16);
+  --fg: #111113;
+  --fg-muted: #52525b;
+  --fg-faint: #85858f;
+  --accent: #9945ff;
+  --accent-strong: #7a2ee0;
+  --accent-soft: rgba(153, 69, 255, 0.12);
+  --accent-2: #0fb371;
+  --warn: #b45309;
+  --warn-soft: rgba(180, 83, 9, 0.08);
+  --warn-border: rgba(180, 83, 9, 0.3);
+  --grid-line: rgba(0, 0, 0, 0.05);
+  --spot: rgba(153, 69, 255, 0.07);
+  --code-bg: rgba(0, 0, 0, 0.04);
+  --thead-bg: rgba(0, 0, 0, 0.025);
+  --row-hover: rgba(0, 0, 0, 0.02);
+  --link-underline: rgba(122, 46, 224, 0.35);
+  --selection: rgba(153, 69, 255, 0.2);
+  color-scheme: light;
 }
 
 @theme inline {
@@ -27,13 +65,13 @@
   --color-fg-faint: var(--fg-faint);
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
+  --color-accent-2: var(--accent-2);
   --color-warn: var(--warn);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
 }
 
 html {
-  color-scheme: dark;
   scroll-behavior: smooth;
   scroll-padding-top: 5rem;
 }
@@ -52,8 +90,8 @@ body {
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
   background-size: 56px 56px;
   mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, #000 30%, transparent 100%);
   -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, #000 30%, transparent 100%);
@@ -64,7 +102,7 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(50% 40% at 50% -10%, rgba(255, 255, 255, 0.08), transparent 70%);
+  background: radial-gradient(50% 40% at 50% -10%, var(--spot), transparent 70%);
 }
 
 /* Cards: quiet border at rest, brighter border and slight lift on hover. */
@@ -137,7 +175,7 @@ body {
 .doc a {
   color: var(--accent-strong);
   text-decoration: underline;
-  text-decoration-color: rgba(165, 180, 252, 0.35);
+  text-decoration-color: var(--link-underline);
   text-underline-offset: 3px;
   transition: text-decoration-color 0.15s;
 }
@@ -174,7 +212,7 @@ body {
 .doc code {
   font-family: var(--font-mono);
   font-size: 0.875em;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--code-bg);
   border: 1px solid var(--border);
   border-radius: 0.35rem;
   padding: 0.1em 0.4em;
@@ -212,7 +250,7 @@ body {
   text-align: left;
   font-weight: 600;
   color: var(--fg);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--thead-bg);
   border-bottom: 1px solid var(--border-strong);
   padding: 0.7rem 0.9rem;
   white-space: nowrap;
@@ -227,14 +265,14 @@ body {
   border-bottom: 0;
 }
 .doc tbody tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--row-hover);
 }
 .doc .unverified {
   font-size: 0.75em;
   font-weight: 500;
   color: var(--warn);
-  background: rgba(251, 191, 36, 0.1);
-  border: 1px solid rgba(251, 191, 36, 0.3);
+  background: var(--warn-soft);
+  border: 1px solid var(--warn-border);
   border-radius: 999px;
   padding: 0.05em 0.5em;
   box-decoration-break: clone;
@@ -260,11 +298,17 @@ body {
 }
 .toc a[data-active="true"] {
   color: var(--fg);
-  border-left-color: var(--accent);
+  border-left-color: var(--accent-2);
 }
 
 ::selection {
-  background: rgba(129, 140, 248, 0.35);
+  background: var(--selection);
+}
+
+/* Theme toggle shows the icon for the theme you would switch to. */
+html[data-theme="light"] .theme-icon-sun,
+html:not([data-theme="light"]) .theme-icon-moon {
+  display: none;
 }
 
 .scroll-thin {
@@ -333,6 +377,6 @@ html[data-mode="beginner"] .mode-card[data-value="beginner"] .mode-card-check,
 html[data-mode="intermediate"] .mode-card[data-value="intermediate"] .mode-card-check,
 html[data-mode="expert"] .mode-card[data-value="expert"] .mode-card-check {
   opacity: 1;
-  color: var(--accent-strong);
-  border-color: var(--accent);
+  color: var(--accent-2);
+  border-color: var(--accent-2);
 }
