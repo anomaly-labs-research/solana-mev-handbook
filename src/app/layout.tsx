@@ -9,7 +9,7 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "MEV Handbook", template: "%s · MEV Handbook" },
+  title: { default: "Solana MEV Handbook", template: "%s · Solana MEV Handbook" },
   description:
     "Strategy explainers and market-structure notes for MEV and trading on Solana: arbitrage, liquidations, JIT, market making, block building and more.",
 };

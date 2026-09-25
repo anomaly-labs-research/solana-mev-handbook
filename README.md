@@ -1,4 +1,4 @@
-# MEV Handbook
+# Solana MEV Handbook
 
 A reader for the MEV and trading-strategy explainers written for the planckwave project:
 what each strategy is, how the math works, what it looks like on Solana, and where the edge
